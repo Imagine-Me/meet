@@ -21,15 +21,10 @@ export default function Navigation({ modalHandler }) {
           Meet
         </Typography>
       </div>
-      <div
-        style={{ display: "flex", alignItems: "center" }}
-        onClick={user.isAuthenticated ? null : modalHandler}
-      >
-        <Button>
-          <User />
-          <div style={{ marginLeft: "5px" }}>Login</div>
-        </Button>
-      </div>
+      <Button onClick={user.isAuthenticated ? null : modalHandler}>
+        <User />
+        <div style={{ marginLeft: "5px" }}>{user.name ?? "Login"}</div>
+      </Button>
     </Box>
   );
 }

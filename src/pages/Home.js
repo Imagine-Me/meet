@@ -1,16 +1,26 @@
-import { Box, Button, Grid, Modal, Typography } from "@material-ui/core";
+import {
+  Box,
+  Button,
+  CircularProgress,
+  Grid,
+  Modal,
+  TextField,
+  Typography,
+} from "@material-ui/core";
 import { makeStyles } from "@material-ui/styles";
 import { useEffect, useRef, useState } from "react";
 import { useRecoilState } from "recoil";
 import Firebase from "firebase";
 
 import Navigation from "../components/Navigation";
-import { getUserStream } from "../utils/Video";
+import { getUserStream, initiatePeerConnection } from "../utils/Video";
 import { state as siteState, user as userState } from "../recoil/state";
 import { IconButton } from "../components/Button";
 import VideoIcon, { VideoOff } from "../icons/videoIcon";
 import { Audio, AudioOff } from "../icons/Audio";
 import GoogleIcon from "../icons/google";
+import { fetchApi } from "../utils/fetch";
+import { useHistory } from "react-router";
 
 const useStyles = makeStyles({
   body: {
@@ -39,9 +49,11 @@ const useStyles = makeStyles({
   modal: {
     backgroundColor: "white",
     borderRadius: "5px",
-    transform: "translateY(-50%)",
-    marginTop: "38%",
+    marginTop: "10%",
     padding: "15px",
+  },
+  marginTop: {
+    marginTop: "15px",
   },
   googleButton: {
     display: "flex",
@@ -57,11 +69,15 @@ const useStyles = makeStyles({
 
 export default function Home() {
   const [modal, setModal] = useState(false);
+  const [host, setHost] = useState(false);
+  const [link, setLink] = useState("");
   const [state, setState] = useRecoilState(siteState);
   const [user, setUser] = useRecoilState(userState);
   const style = useStyles();
 
   const videoRef = useRef(null);
+
+  const history = useHistory();
 
   useEffect(() => {
     async function getUserMediaStream() {
@@ -84,9 +100,11 @@ export default function Home() {
     if (user.firebase) {
       user.firebase.auth().onAuthStateChanged((u) => {
         if (u) {
+          console.log(u.displayName);
           setUser((oldState) => ({
             ...oldState,
             isAuthenticated: true,
+            name: u.displayName,
           }));
         } else {
           setModal(true);
@@ -120,14 +138,54 @@ export default function Home() {
       .auth()
       .signInWithPopup(provider)
       .then((result) => {
-        var user = result.user;
         setModal(false);
         setUser((oldState) => ({
           ...oldState,
           isAuthenticated: true,
         }));
       })
-      .catch((error) => {});
+      .catch((error) => {
+        console.log(error);
+      });
+  };
+
+  const meetButtonHandler = (type) => {
+    switch (type) {
+      case "host":
+        if (!user.isAuthenticated) {
+          setModal(true);
+          return;
+        }
+        setHost(true);
+        initiatePeer("host");
+        break;
+      case "join":
+        if (!user.isAuthenticated) {
+          setModal(true);
+          return;
+        }
+        break;
+
+      default:
+        return;
+    }
+  };
+
+  const initiatePeer = async (type) => {
+    const response = await fetchApi(type, [
+      {
+        name: user.name,
+      },
+    ]);
+    const json = await response.json();
+    const peerConnection = initiatePeerConnection();
+    setState((oldState) => ({
+      ...oldState,
+      pc: peerConnection,
+      link: json.meetId,
+    }));
+    history.push(`/${json.meetId}`);
+    setHost(false);
   };
 
   return (
@@ -135,7 +193,7 @@ export default function Home() {
       <Navigation modalHandler={() => setModal(true)} />
       <Box height="90%" display="flex" alignItems="center" marginX={10}>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={6} justifyContent="center">
+          <Grid item xs={12} md={6}>
             <Box>
               <Typography variant="h4" color="textPrimary">
                 Start instant meeting
@@ -146,18 +204,35 @@ export default function Home() {
                   variant="contained"
                   size="large"
                   fullWidth
-                  style={{ marginTop: "15px" }}
-                  disabled={!user.isAuthenticated}
+                  className={style.marginTop}
+                  onClick={() => meetButtonHandler("host")}
+                  disabled={host}
                 >
+                  {host ? (
+                    <CircularProgress
+                      color="inherit"
+                      size={18}
+                      style={{ marginRight: "8px" }}
+                    />
+                  ) : null}
                   Start Instant Meeting
                 </Button>
+                <TextField
+                  variant="outlined"
+                  placeholder="Enter link"
+                  label=""
+                  className={style.marginTop}
+                  onChange={(e) => setLink(e.target.value)}
+                  fullWidth
+                />
                 <Button
                   color="secondary"
                   variant="contained"
                   size="large"
                   fullWidth
-                  style={{ marginTop: "15px" }}
-                  disabled={!user.isAuthenticated}
+                  className={style.marginTop}
+                  disabled={!link}
+                  onClick={() => meetButtonHandler("join")}
                 >
                   Join Meeting
                 </Button>

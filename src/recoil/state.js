@@ -8,6 +8,8 @@ export const state = atom({
       audio: false,
       video: false,
     },
+    link: null,
+    pc: null,
   },
 });
 
@@ -16,5 +18,6 @@ export const user = atom({
   default: {
     firebase: null,
     isAuthenticated: false,
+    name: null,
   },
 });
