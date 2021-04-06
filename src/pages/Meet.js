@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import { useHistory } from "react-router";
 import { useRecoilState } from "recoil";
 import { state as userState, user as userDetails } from "../recoil/state";
-import { createOffer, initiatePeerConnection } from "../utils/Video";
+import {
+  addRemoteDescription,
+  answerOffer,
+  createOffer,
+  initiatePeerConnection,
+} from "../utils/Video";
 import { io } from "socket.io-client";
 
 export default function Meet(props) {
@@ -57,14 +62,34 @@ export default function Meet(props) {
       });
       socket.on("get_offer", (data) => {
         console.log("GOT AN SDP ", data);
+        initiateAnswers(data);
+      });
+      socket.on("get_answer", (data) => {
+        console.log("GOT ANSWER", data);
+        addAnswer(data);
       });
       // socket
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket]);
+
+  useEffect(() => {
+    state.pc.forEach((pc) => {
+      if (!pc.isCompleted) {
+        console.log("here ", pc);
+        const data = {
+          socket: pc.socket,
+          sdp: pc.sdp,
+        };
+        pc.method(data);
+        return;
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.pc]);
   const initiateOffer = async (socket) => {
     console.log("INITIATING OFFER FOR NEW USER");
-    const pc = initiatePeerConnection();
+    const pc = await initiatePeerConnection();
 
     pc.oniceconnectionstatechange = () => {
       if (pc.iceConnectionState == "disconnected") {
@@ -84,14 +109,14 @@ export default function Meet(props) {
       socket,
       sdp: pc.localDescription,
       pc,
+      method: sendOffer,
+      isCompleted: false,
     };
     peerConnections.push(peerConnection);
-
     setState((oldState) => ({
       ...oldState,
       pc: peerConnections,
     }));
-    sendOffer(peerConnection);
   };
 
   const createOffers = async (pc) => {
@@ -100,11 +125,70 @@ export default function Meet(props) {
   };
 
   const sendOffer = (peerConnection) => {
+    console.log("SENDING OFFER.....", peerConnection);
     const data = {
       socketId: peerConnection.socket,
       sdp: peerConnection.sdp,
     };
+    const newPc = state.pc.map((peer) => {
+      if (peer.socket === peerConnection.socket) {
+        peer.isCompleted = true;
+      }
+      return peer;
+    });
+    setState((oldState) => ({
+      ...oldState,
+      pc: newPc,
+    }));
     socket.emit("send_offer", data);
+  };
+
+  const initiateAnswers = async (data) => {
+    console.log("ANSWERING OFFER");
+    const pc = await initiatePeerConnection();
+    await addRemoteDescription(pc, data.sdp);
+    await answerOffers(pc);
+
+    const peerConnections = [...state.pc];
+    const peerConnection = {
+      socket: data.socketId,
+      sdp: pc.localDescription,
+      pc,
+      method: sendAnswer,
+      isCompleted: false,
+    };
+    peerConnections.push(peerConnection);
+    setState((oldState) => ({
+      ...oldState,
+      pc: peerConnections,
+    }));
+  };
+
+  const answerOffers = async (pc) => {
+    const localDescription = await answerOffer(pc);
+    pc.setLocalDescription(localDescription);
+  };
+
+  const sendAnswer = (peerConnection) => {
+    console.log("SENDING ANSWER...");
+    const data = {
+      socketId: peerConnection.socket,
+      sdp: peerConnection.sdp,
+    };
+    const newPc = state.pc.map((peer) => {
+      if (peer.socket === peerConnection.socket) {
+        peer.isCompleted = true;
+      }
+      return peer;
+    });
+    setState((oldState) => ({
+      ...oldState,
+      pc: newPc,
+    }));
+    socket.emit("send_answer", data);
+  };
+  const addAnswer = (data) => {
+    console.log("GOT AN ANSWER", data);
   };
 
   return <div>Meet</div>;

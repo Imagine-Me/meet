@@ -18,3 +18,11 @@ export const initiatePeerConnection = () => {
 export const createOffer = (pc) => {
   return pc.createOffer();
 };
+
+export const addRemoteDescription = (pc, sdp) => {
+  return pc.setRemoteDescription(new RTCSessionDescription(sdp));
+};
+
+export const answerOffer = (pc) => {
+  return pc.createAnswer();
+};
