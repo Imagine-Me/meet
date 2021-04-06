@@ -14,3 +14,7 @@ export const initiatePeerConnection = () => {
     return connection;
   } catch {}
 };
+
+export const createOffer = (pc) => {
+  return pc.createOffer();
+};

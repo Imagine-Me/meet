@@ -10,7 +10,7 @@ import {
 import { makeStyles } from "@material-ui/styles";
 import { useEffect, useRef, useState } from "react";
 import { useRecoilState } from "recoil";
-import Firebase from "firebase";
+import Firebase from "firebase/app";
 
 import Navigation from "../components/Navigation";
 import { getUserStream, initiatePeerConnection } from "../utils/Video";
@@ -20,6 +20,7 @@ import VideoIcon, { VideoOff } from "../icons/videoIcon";
 import { Audio, AudioOff } from "../icons/Audio";
 import GoogleIcon from "../icons/google";
 import { fetchApi } from "../utils/fetch";
+import useQuery from "../hooks/useQuery";
 import { useHistory } from "react-router";
 
 const useStyles = makeStyles({
@@ -67,7 +68,7 @@ const useStyles = makeStyles({
   },
 });
 
-export default function Home() {
+export default function Home(props) {
   const [modal, setModal] = useState(false);
   const [host, setHost] = useState(false);
   const [link, setLink] = useState("");
@@ -75,9 +76,18 @@ export default function Home() {
   const [user, setUser] = useRecoilState(userState);
   const style = useStyles();
 
+  const parameter = useQuery(props.location);
+
   const videoRef = useRef(null);
 
   const history = useHistory();
+
+  useEffect(() => {
+    const redirectLink = parameter.get("redirect");
+    if (redirectLink) {
+      setLink(redirectLink);
+    }
+  }, []);
 
   useEffect(() => {
     async function getUserMediaStream() {
@@ -94,17 +104,18 @@ export default function Home() {
       videoRef.current.srcObject = stream;
     }
     getUserMediaStream();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.constraints]);
 
   useEffect(() => {
     if (user.firebase) {
       user.firebase.auth().onAuthStateChanged((u) => {
         if (u) {
-          console.log(u.displayName);
           setUser((oldState) => ({
             ...oldState,
             isAuthenticated: true,
             name: u.displayName,
+            email: u.email,
           }));
         } else {
           setModal(true);
@@ -157,13 +168,26 @@ export default function Home() {
           return;
         }
         setHost(true);
-        initiatePeer("host");
+        const dataHost = [
+          {
+            name: user.name,
+            email: user.email,
+          },
+        ];
+        initiatePeer("host", dataHost);
         break;
       case "join":
         if (!user.isAuthenticated) {
           setModal(true);
           return;
         }
+        const dataJoin = {
+          name: user.name,
+          email: user.email,
+          meetId: link,
+        };
+        console.log(dataJoin);
+        initiatePeer("join", dataJoin);
         break;
 
       default:
@@ -171,12 +195,8 @@ export default function Home() {
     }
   };
 
-  const initiatePeer = async (type) => {
-    const response = await fetchApi(type, [
-      {
-        name: user.name,
-      },
-    ]);
+  const initiatePeer = async (type, data) => {
+    const response = await fetchApi(type, data);
     const json = await response.json();
     const peerConnection = initiatePeerConnection();
     setState((oldState) => ({
@@ -184,8 +204,8 @@ export default function Home() {
       pc: peerConnection,
       link: json.meetId,
     }));
-    history.push(`/${json.meetId}`);
     setHost(false);
+    history.push(`/${json.meetId}`);
   };
 
   return (
@@ -223,6 +243,7 @@ export default function Home() {
                   label=""
                   className={style.marginTop}
                   onChange={(e) => setLink(e.target.value)}
+                  value={link}
                   fullWidth
                 />
                 <Button

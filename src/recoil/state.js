@@ -19,5 +19,7 @@ export const user = atom({
     firebase: null,
     isAuthenticated: false,
     name: null,
+    email: null,
+    socketId: null,
   },
 });

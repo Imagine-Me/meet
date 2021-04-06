@@ -1,5 +1,5 @@
 import { Box, Button, Typography } from "@material-ui/core";
-import { useSetRecoilState, useRecoilValue } from "recoil";
+import { useRecoilValue } from "recoil";
 import { user as userState } from "../recoil/state";
 
 import User from "../icons/user";
