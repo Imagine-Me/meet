@@ -9,7 +9,7 @@ export const state = atom({
       video: false,
     },
     link: null,
-    pc: null,
+    pc: [],
   },
 });
 

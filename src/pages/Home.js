@@ -13,7 +13,7 @@ import { useRecoilState } from "recoil";
 import Firebase from "firebase/app";
 
 import Navigation from "../components/Navigation";
-import { getUserStream, initiatePeerConnection } from "../utils/Video";
+import { getUserStream } from "../utils/Video";
 import { state as siteState, user as userState } from "../recoil/state";
 import { IconButton } from "../components/Button";
 import VideoIcon, { VideoOff } from "../icons/videoIcon";
@@ -198,10 +198,8 @@ export default function Home(props) {
   const initiatePeer = async (type, data) => {
     const response = await fetchApi(type, data);
     const json = await response.json();
-    const peerConnection = initiatePeerConnection();
     setState((oldState) => ({
       ...oldState,
-      pc: peerConnection,
       link: json.meetId,
     }));
     setHost(false);
