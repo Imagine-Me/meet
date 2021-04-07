@@ -18,7 +18,6 @@ import {
   INITIATE_OFFER,
 } from "../utils/constants";
 import { makeStyles } from "@material-ui/styles";
-import { Box } from "@material-ui/core";
 
 const useStyles = makeStyles({
   mainContainer: {
@@ -131,6 +130,8 @@ export default function Meet(props) {
       default:
         break;
     }
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [call]);
 
   useEffect(() => {
@@ -165,7 +166,7 @@ export default function Meet(props) {
         .forEach((track) => pc.addTrack(track, state.stream));
     }
     pc.oniceconnectionstatechange = () => {
-      if (pc.iceConnectionState == "disconnected") {
+      if (pc.iceConnectionState === "disconnected") {
       }
     };
     // pc.addTransceiver()
@@ -305,8 +306,6 @@ export default function Meet(props) {
     const pc = peer?.[0].pc;
     addIceCandidate(pc, candidates);
   };
-
-  const setVideoRef = () => {};
 
   return (
     <div className={styles.mainContainer}>

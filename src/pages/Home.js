@@ -87,6 +87,8 @@ export default function Home(props) {
     if (redirectLink) {
       setLink(redirectLink);
     }
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
