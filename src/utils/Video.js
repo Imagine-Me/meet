@@ -10,7 +10,7 @@ export const initiatePeerConnection = () => {
     const configuration = {
       iceServers: [{ urls: "stun:stun2.1.google.com:19302" }],
     };
-    const connection = new RTCPeerConnection(configuration);
+    const connection = new RTCPeerConnection();
     return connection;
   } catch {}
 };
@@ -26,3 +26,4 @@ export const addRemoteDescription = (pc, sdp) => {
 export const answerOffer = (pc) => {
   return pc.createAnswer();
 };
+

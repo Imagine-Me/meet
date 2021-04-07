@@ -186,7 +186,6 @@ export default function Home(props) {
           email: user.email,
           meetId: link,
         };
-        console.log(dataJoin);
         initiatePeer("join", dataJoin);
         break;
 

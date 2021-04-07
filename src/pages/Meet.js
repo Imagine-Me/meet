@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useHistory } from "react-router";
 import { useRecoilState } from "recoil";
+import { v4 as uuidv4 } from "uuid";
 import { state as userState, user as userDetails } from "../recoil/state";
 import {
   addRemoteDescription,
@@ -12,6 +13,7 @@ import { io } from "socket.io-client";
 
 export default function Meet(props) {
   const [socket, setSocket] = useState(null);
+  const [call, setCall] = useState({});
   const [state, setState] = useRecoilState(userState);
   const [user, setUser] = useRecoilState(userDetails);
 
@@ -24,16 +26,6 @@ export default function Meet(props) {
         link,
       }));
       if (user.isAuthenticated) {
-        // if (state.stream !== undefined) {
-        //   state.stream
-        //     .getTracks()
-        //     .forEach((track) => state.pc.addTrack(track, state.stream));
-        // }
-        // state.pc.onicecandidate = (e) => {
-        //   if (e.candidate) {
-        //     console.log(e.candidate);
-        //   }
-        // };
         setSocket(io(process.env.REACT_APP_BASE_URL));
       } else {
         history.push(`/?redirect=${link}`);
@@ -56,17 +48,26 @@ export default function Meet(props) {
       socket.on("user_joined", (data) => {
         if (data !== socket.id) {
           // A NEW USER JOINED CREATE AN OFFER
-          console.log("A NEW USER JOINED WITH SOCKET ID -", data);
-          initiateOffer(data);
+          const result = {
+            type: "initiate_offer",
+            value: data,
+          };
+          setCall(result);
         }
       });
       socket.on("get_offer", (data) => {
-        console.log("GOT AN SDP ", data);
-        initiateAnswers(data);
+        const result = {
+          type: "initiate_answer",
+          value: data,
+        };
+        setCall(result);
       });
-      socket.on("get_answer", (data) => {
-        console.log("GOT ANSWER", data);
-        addAnswer(data);
+      socket.on("get_answer", function (data) {
+        const result = {
+          type: "add_answer",
+          value: data,
+        };
+        setCall(result);
       });
       // socket
     }
@@ -74,23 +75,52 @@ export default function Meet(props) {
   }, [socket]);
 
   useEffect(() => {
+    const type = call?.type;
+    switch (type) {
+      case "initiate_offer":
+        initiateOffer(call.value);
+        break;
+      case "initiate_answer":
+        initiateAnswers(call.value);
+        break;
+      case "add_answer":
+        addAnswer(call.value);
+        break;
+      default:
+        break;
+    }
+  }, [call]);
+
+  useEffect(() => {
     state.pc.forEach((pc) => {
       if (!pc.isCompleted) {
-        console.log("here ", pc);
         const data = {
           socket: pc.socket,
           sdp: pc.sdp,
+          id: pc.id,
         };
-        pc.method(data);
-        return;
+        switch (pc.method) {
+          case "offer":
+            sendOffer(data);
+            return;
+          case "answer":
+            sendAnswer(data);
+            return;
+          default:
+            return;
+        }
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.pc]);
   const initiateOffer = async (socket) => {
-    console.log("INITIATING OFFER FOR NEW USER");
     const pc = await initiatePeerConnection();
 
+    if (state.stream !== undefined) {
+      state.stream
+        .getTracks()
+        .forEach((track) => pc.addTrack(track, state.stream));
+    }
     pc.oniceconnectionstatechange = () => {
       if (pc.iceConnectionState == "disconnected") {
       }
@@ -98,18 +128,19 @@ export default function Meet(props) {
 
     pc.onicecandidate = (e) => {
       if (e.candidate) {
-        console.error(socket);
-        console.log(e.candidate);
+        console.log(e.candidate, socket);
+      } else {
       }
     };
     pc.onnegotiationneeded = await createOffers(pc);
-
     const peerConnections = [...state.pc];
+    const pcId = uuidv4();
     const peerConnection = {
+      id: pcId,
       socket,
       sdp: pc.localDescription,
       pc,
-      method: sendOffer,
+      method: "offer",
       isCompleted: false,
     };
     peerConnections.push(peerConnection);
@@ -119,20 +150,21 @@ export default function Meet(props) {
     }));
   };
 
-  const createOffers = async (pc) => {
-    const sdp = await createOffer(pc);
-    pc.setLocalDescription(sdp);
+  const createOffers = (pc) => {
+    return createOffer(pc).then((sdp) => pc.setLocalDescription(sdp));
   };
 
   const sendOffer = (peerConnection) => {
-    console.log("SENDING OFFER.....", peerConnection);
     const data = {
       socketId: peerConnection.socket,
       sdp: peerConnection.sdp,
+      id: peerConnection.id,
     };
     const newPc = state.pc.map((peer) => {
       if (peer.socket === peerConnection.socket) {
-        peer.isCompleted = true;
+        const p = { ...peer };
+        p.isCompleted = true;
+        return p;
       }
       return peer;
     });
@@ -140,11 +172,11 @@ export default function Meet(props) {
       ...oldState,
       pc: newPc,
     }));
+
     socket.emit("send_offer", data);
   };
 
   const initiateAnswers = async (data) => {
-    console.log("ANSWERING OFFER");
     const pc = await initiatePeerConnection();
     await addRemoteDescription(pc, data.sdp);
     await answerOffers(pc);
@@ -152,9 +184,10 @@ export default function Meet(props) {
     const peerConnections = [...state.pc];
     const peerConnection = {
       socket: data.socketId,
+      id: data.id,
       sdp: pc.localDescription,
       pc,
-      method: sendAnswer,
+      method: "answer",
       isCompleted: false,
     };
     peerConnections.push(peerConnection);
@@ -170,14 +203,16 @@ export default function Meet(props) {
   };
 
   const sendAnswer = (peerConnection) => {
-    console.log("SENDING ANSWER...");
     const data = {
       socketId: peerConnection.socket,
       sdp: peerConnection.sdp,
+      id: peerConnection.id,
     };
     const newPc = state.pc.map((peer) => {
       if (peer.socket === peerConnection.socket) {
-        peer.isCompleted = true;
+        const p = { ...peer };
+        p.isCompleted = true;
+        return p;
       }
       return peer;
     });
@@ -187,8 +222,12 @@ export default function Meet(props) {
     }));
     socket.emit("send_answer", data);
   };
-  const addAnswer = (data) => {
-    console.log("GOT AN ANSWER", data);
+  const addAnswer = async (data) => {
+    const pcId = data.id;
+    const sdp = data.sdp;
+    const peer = state.pc.filter((p) => p.id === pcId);
+    const pc = peer?.[0].pc;
+    await addRemoteDescription(pc, sdp);
   };
 
   return <div>Meet</div>;

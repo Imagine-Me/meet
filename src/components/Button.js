@@ -15,7 +15,7 @@ export const IconButton = ({ children, on, onClick }) => {
   const style = useStyles();
   return (
     <Button
-      color={on ? "" : "secondary"}
+      color={on ? "default" : "secondary"}
       variant="contained"
       className={style.button}
       onClick={onClick}
