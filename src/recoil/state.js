@@ -5,7 +5,7 @@ export const state = atom({
   default: {
     stream: null,
     constraints: {
-      audio: true,
+      audio: false,
       video: false,
     },
     link: null,

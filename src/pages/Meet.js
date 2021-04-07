@@ -1,15 +1,45 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useHistory } from "react-router";
 import { useRecoilState } from "recoil";
 import { v4 as uuidv4 } from "uuid";
 import { state as userState, user as userDetails } from "../recoil/state";
 import {
+  addIceCandidate,
   addRemoteDescription,
   answerOffer,
   createOffer,
   initiatePeerConnection,
 } from "../utils/Video";
 import { io } from "socket.io-client";
+import {
+  ADD_ANSWER,
+  GET_ICE_CANDIDATE,
+  INITIATE_ANSWER,
+  INITIATE_OFFER,
+} from "../utils/constants";
+import { makeStyles } from "@material-ui/styles";
+import { Box } from "@material-ui/core";
+
+const useStyles = makeStyles({
+  mainContainer: {
+    backgroundColor: "black",
+    width: "100%",
+    height: "100%",
+    position: "relative",
+  },
+  videoContainer: {
+    height: "425px",
+    maxWidth: "570px",
+    width: "100%",
+    maxHeight: "600px",
+    backgroundColor: "black",
+    borderRadius: "7px",
+  },
+  video: {
+    width: "100%",
+    height: "100%",
+  },
+});
 
 export default function Meet(props) {
   const [socket, setSocket] = useState(null);
@@ -18,6 +48,9 @@ export default function Meet(props) {
   const [user, setUser] = useRecoilState(userDetails);
 
   const history = useHistory();
+  const styles = useStyles();
+  const videoRef = useRef(null);
+
   useEffect(
     () => {
       const link = props.match.params.meetId;
@@ -49,7 +82,7 @@ export default function Meet(props) {
         if (data !== socket.id) {
           // A NEW USER JOINED CREATE AN OFFER
           const result = {
-            type: "initiate_offer",
+            type: INITIATE_OFFER,
             value: data,
           };
           setCall(result);
@@ -57,19 +90,25 @@ export default function Meet(props) {
       });
       socket.on("get_offer", (data) => {
         const result = {
-          type: "initiate_answer",
+          type: INITIATE_ANSWER,
           value: data,
         };
         setCall(result);
       });
       socket.on("get_answer", function (data) {
         const result = {
-          type: "add_answer",
+          type: ADD_ANSWER,
           value: data,
         };
         setCall(result);
       });
-      // socket
+      socket.on("get_ice_candidates", (data) => {
+        const result = {
+          type: GET_ICE_CANDIDATE,
+          value: data,
+        };
+        setCall(result);
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket]);
@@ -77,14 +116,17 @@ export default function Meet(props) {
   useEffect(() => {
     const type = call?.type;
     switch (type) {
-      case "initiate_offer":
+      case INITIATE_OFFER:
         initiateOffer(call.value);
         break;
-      case "initiate_answer":
+      case INITIATE_ANSWER:
         initiateAnswers(call.value);
         break;
-      case "add_answer":
+      case ADD_ANSWER:
         addAnswer(call.value);
+        break;
+      case GET_ICE_CANDIDATE:
+        setIceCandidates(call.value);
         break;
       default:
         break;
@@ -113,8 +155,9 @@ export default function Meet(props) {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.pc]);
-  const initiateOffer = async (socket) => {
+  const initiateOffer = async (socketId) => {
     const pc = await initiatePeerConnection();
+    const pcId = uuidv4();
 
     if (state.stream !== undefined) {
       state.stream
@@ -125,19 +168,30 @@ export default function Meet(props) {
       if (pc.iceConnectionState == "disconnected") {
       }
     };
+    // pc.addTransceiver()
 
+    const candidates = [];
     pc.onicecandidate = (e) => {
       if (e.candidate) {
-        console.log(e.candidate, socket);
+        candidates.push(e.candidate);
       } else {
+        const data = {
+          socketId,
+          candidates: candidates,
+          pcId,
+        };
+        socket.emit("send_ice_candidate", data);
       }
+    };
+    pc.ontrack = (e) => {
+      console.log("INCOMING STREAM", e);
+      videoRef.current.srcObject = e.streams[0];
     };
     pc.onnegotiationneeded = await createOffers(pc);
     const peerConnections = [...state.pc];
-    const pcId = uuidv4();
     const peerConnection = {
       id: pcId,
-      socket,
+      socket: socketId,
       sdp: pc.localDescription,
       pc,
       method: "offer",
@@ -155,6 +209,7 @@ export default function Meet(props) {
   };
 
   const sendOffer = (peerConnection) => {
+    console.log("SENDING OFFER...");
     const data = {
       socketId: peerConnection.socket,
       sdp: peerConnection.sdp,
@@ -178,6 +233,18 @@ export default function Meet(props) {
 
   const initiateAnswers = async (data) => {
     const pc = await initiatePeerConnection();
+
+    if (state.stream !== undefined) {
+      state.stream
+        .getTracks()
+        .forEach((track) => pc.addTrack(track, state.stream));
+    }
+
+    pc.ontrack = (e) => {
+      console.log("INCOMING STREAM", e);
+      videoRef.current.srcObject = e.streams[0];
+    };
+
     await addRemoteDescription(pc, data.sdp);
     await answerOffers(pc);
 
@@ -230,5 +297,20 @@ export default function Meet(props) {
     await addRemoteDescription(pc, sdp);
   };
 
-  return <div>Meet</div>;
+  const setIceCandidates = (data) => {
+    console.log("Adding candidates..");
+    const pcId = data.pcId;
+    const candidates = data.candidates;
+    const peer = state.pc.filter((p) => p.id === pcId);
+    const pc = peer?.[0].pc;
+    addIceCandidate(pc, candidates);
+  };
+
+  const setVideoRef = () => {};
+
+  return (
+    <div className={styles.mainContainer}>
+      <video ref={videoRef} className={styles.video} autoPlay playsInline />
+    </div>
+  );
 }

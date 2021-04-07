@@ -16,7 +16,10 @@ export const initiatePeerConnection = () => {
 };
 
 export const createOffer = (pc) => {
-  return pc.createOffer();
+  return pc.createOffer({
+    offerToReceiveVideo: true,
+    offerToReceiveAudio: true,
+  });
 };
 
 export const addRemoteDescription = (pc, sdp) => {
@@ -24,6 +27,14 @@ export const addRemoteDescription = (pc, sdp) => {
 };
 
 export const answerOffer = (pc) => {
-  return pc.createAnswer();
+  return pc.createAnswer({
+    offerToReceiveVideo: true,
+    offerToReceiveAudio: true,
+  });
 };
 
+export const addIceCandidate = (pc, candidates) => {
+  candidates.forEach((candidate) =>
+    pc.addIceCandidate(new RTCIceCandidate(candidate))
+  );
+};
