@@ -7,9 +7,6 @@ export const getUserStream = async (constraints) => {
 
 export const initiatePeerConnection = () => {
   try {
-    const configuration = {
-      iceServers: [{ urls: "stun:stun2.1.google.com:19302" }],
-    };
     const connection = new RTCPeerConnection();
     return connection;
   } catch {}
