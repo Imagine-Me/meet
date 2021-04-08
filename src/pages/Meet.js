@@ -153,6 +153,7 @@ export default function Meet(props) {
         addTracksToVideo(videoRef.ref, track.stream);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [track]);
   useEffect(() => {
     if (!isObjectEmpty(track) && !track.isAdded) {
@@ -165,6 +166,7 @@ export default function Meet(props) {
         addTracksToVideo(videoRef.ref, track.stream);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoRefs]);
 
   useEffect(() => {
@@ -247,7 +249,6 @@ export default function Meet(props) {
   };
 
   const sendOffer = (peerConnection) => {
-    console.log("SENDING OFFER...");
     const data = {
       socketId: peerConnection.socket,
       sdp: peerConnection.sdp,
@@ -340,7 +341,6 @@ export default function Meet(props) {
   };
 
   const setIceCandidates = (data) => {
-    console.log("Adding candidates..");
     const pcId = data.pcId;
     const candidates = data.candidates;
     const peer = state.pc.filter((p) => p.id === pcId);
