@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState, createRef } from "react";
 import { useHistory } from "react-router";
 import { useRecoilState } from "recoil";
 import { v4 as uuidv4 } from "uuid";
@@ -18,6 +18,8 @@ import {
   INITIATE_OFFER,
 } from "../utils/constants";
 import { makeStyles } from "@material-ui/styles";
+import { Box } from "@material-ui/core";
+import { isObjectEmpty } from "../utils/object";
 
 const useStyles = makeStyles({
   mainContainer: {
@@ -43,12 +45,18 @@ const useStyles = makeStyles({
 export default function Meet(props) {
   const [socket, setSocket] = useState(null);
   const [call, setCall] = useState({});
+  const [track, setTrack] = useState({});
   const [state, setState] = useRecoilState(userState);
   const [user, setUser] = useRecoilState(userDetails);
 
   const history = useHistory();
   const styles = useStyles();
-  const videoRef = useRef(null);
+  const videoRefs = useMemo(() => {
+    return state.pc.map((p) => ({
+      id: p.id,
+      ref: createRef(),
+    }));
+  }, [state.pc]);
 
   useEffect(
     () => {
@@ -135,6 +143,31 @@ export default function Meet(props) {
   }, [call]);
 
   useEffect(() => {
+    if (!isObjectEmpty(track) && !track.isAdded) {
+      let videoRef = videoRefs.filter((v) => v.id === track.id);
+      videoRef = videoRef?.[0];
+      if (videoRef) {
+        const data = { ...track };
+        data.isAdded = true;
+        setTrack(data);
+        addTracksToVideo(videoRef.ref, track.stream);
+      }
+    }
+  }, [track]);
+  useEffect(() => {
+    if (!isObjectEmpty(track) && !track.isAdded) {
+      let videoRef = videoRefs.filter((v) => v.id === track.id);
+      videoRef = videoRef?.[0];
+      if (videoRef) {
+        const data = { ...track };
+        data.isAdded = true;
+        setTrack(data);
+        addTracksToVideo(videoRef.ref, track.stream);
+      }
+    }
+  }, [videoRefs]);
+
+  useEffect(() => {
     state.pc.forEach((pc) => {
       if (!pc.isCompleted) {
         const data = {
@@ -185,8 +218,12 @@ export default function Meet(props) {
       }
     };
     pc.ontrack = (e) => {
-      console.log("INCOMING STREAM", e);
-      videoRef.current.srcObject = e.streams[0];
+      const data = {
+        id: pcId,
+        stream: e.streams[0],
+        isAdded: false,
+      };
+      setTrack(data);
     };
     pc.onnegotiationneeded = await createOffers(pc);
     const peerConnections = [...state.pc];
@@ -242,8 +279,12 @@ export default function Meet(props) {
     }
 
     pc.ontrack = (e) => {
-      console.log("INCOMING STREAM", e);
-      videoRef.current.srcObject = e.streams[0];
+      const datas = {
+        id: data.id,
+        stream: e.streams[0],
+        isAdded: false,
+      };
+      setTrack(datas);
     };
 
     await addRemoteDescription(pc, data.sdp);
@@ -307,9 +348,17 @@ export default function Meet(props) {
     addIceCandidate(pc, candidates);
   };
 
+  const addTracksToVideo = (ref, stream) => {
+    ref.current.srcObject = stream;
+  };
+
   return (
-    <div className={styles.mainContainer}>
-      <video ref={videoRef} className={styles.video} autoPlay playsInline />
+    <div>
+      {videoRefs.map((v) => (
+        <Box key={v.id} className={styles.videoContainer} position="relative">
+          <video ref={v.ref} className={styles.video} autoPlay playsInline />
+        </Box>
+      ))}
     </div>
   );
 }
