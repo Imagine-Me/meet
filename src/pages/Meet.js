@@ -16,6 +16,7 @@ import {
   GET_ICE_CANDIDATE,
   INITIATE_ANSWER,
   INITIATE_OFFER,
+  REQUEST_OFFER,
 } from "../utils/constants";
 import { makeStyles } from "@material-ui/styles";
 import { Box } from "@material-ui/core";
@@ -44,8 +45,11 @@ const useStyles = makeStyles({
 
 export default function Meet(props) {
   const [socket, setSocket] = useState(null);
-  const [call, setCall] = useState({});
+  const [isBusy, setIsBusy] = useState(false);
   const [track, setTrack] = useState({});
+  const [pcRequestQueue, setPcRequestQueue] = useState([]);
+  const [socketListener, setSocketListener] = useState(null);
+  const [ice, setIce] = useState([]);
   const [state, setState] = useRecoilState(userState);
   const [user, setUser] = useRecoilState(userDetails);
 
@@ -85,62 +89,187 @@ export default function Meet(props) {
           socketId,
         }));
       });
-      socket.on("user_joined", (data) => {
-        if (data !== socket.id) {
-          // A NEW USER JOINED CREATE AN OFFER
-          const result = {
-            type: INITIATE_OFFER,
-            value: data,
-          };
-          setCall(result);
-        }
+
+      socket.on("get_users", (data) => {
+        const initialUsers = data.map((value) => ({
+          isCompleted: false,
+          socketTo: value,
+          requests: [{ type: REQUEST_OFFER, isCompleted: false }],
+          id: undefined,
+        }));
+        setSocketListener(initialUsers);
       });
+
+      socket.on("get_offer_request", (data) => {
+        const result = {
+          socketTo: data,
+          id: null,
+          requests: [{ type: INITIATE_OFFER, isCompleted: false }],
+          isCompleted: false,
+        };
+        setSocketListener(result);
+      });
+
       socket.on("get_offer", (data) => {
         const result = {
-          type: INITIATE_ANSWER,
-          value: data,
+          id: data.id,
+          socketTo: data.socketFrom,
+          requests: [
+            { type: INITIATE_ANSWER, isCompleted: false, value: data },
+          ],
         };
-        setCall(result);
+        setSocketListener(result);
       });
+
       socket.on("get_answer", function (data) {
         const result = {
-          type: ADD_ANSWER,
-          value: data,
+          id: data.id,
+          socketTo: data.socketFrom,
+          requests: [{ type: ADD_ANSWER, value: data, isCompleted: false }],
         };
-        setCall(result);
+        setSocketListener(result);
       });
+
       socket.on("get_ice_candidates", (data) => {
         const result = {
-          type: GET_ICE_CANDIDATE,
-          value: data,
+          isCompleted: false,
+          id: data.pcId,
+          requests: [
+            {
+              type: GET_ICE_CANDIDATE,
+              value: data.candidates,
+              isCompleted: false,
+            },
+          ],
         };
-        setCall(result);
+        setSocketListener(result);
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket]);
 
   useEffect(() => {
-    const type = call?.type;
-    switch (type) {
-      case INITIATE_OFFER:
-        initiateOffer(call.value);
-        break;
-      case INITIATE_ANSWER:
-        initiateAnswers(call.value);
-        break;
-      case ADD_ANSWER:
-        addAnswer(call.value);
-        break;
-      case GET_ICE_CANDIDATE:
-        setIceCandidates(call.value);
-        break;
-      default:
-        break;
+    if (socketListener !== null) {
+      if (Array.isArray(socketListener)) {
+        setPcRequestQueue(socketListener);
+      } else {
+        if (socketListener.id) {
+          const pcRequestQueueCopy = pcRequestQueue.map((pr) => {
+            if (
+              pr.id === socketListener.id ||
+              pr.socketTo === socketListener.socketTo
+            ) {
+              const prCopy = { ...pr };
+              prCopy.id = socketListener.id;
+              const requestCopy = [...prCopy.requests];
+              const updatedRequest = requestCopy.concat(
+                socketListener.requests
+              );
+              prCopy.requests = updatedRequest;
+              return prCopy;
+            }
+            return pr;
+          });
+          setPcRequestQueue(pcRequestQueueCopy);
+        } else {
+          const pcRequestQueueCopy = [...pcRequestQueue];
+          pcRequestQueueCopy.push(socketListener);
+          setPcRequestQueue(pcRequestQueueCopy);
+        }
+      }
     }
+  }, [socketListener]);
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [call]);
+  useEffect(() => {
+    let flag = false;
+    pcRequestQueue.every((pcRequest, index) => {
+      if (isBusy) {
+        return false;
+      }
+      if (!pcRequest.isCompleted) {
+        flag = true;
+        pcRequest.requests.every((request) => {
+          const result = {
+            socketFrom: socket.id,
+            socketTo: pcRequest.socketTo,
+          };
+          if (!request.isCompleted) {
+            switch (request.type) {
+              case REQUEST_OFFER:
+                socket.emit("get_offer", result);
+                setUpdatedPcRequest(index, request.type);
+                return false;
+              case INITIATE_OFFER:
+                setIsBusy(true);
+                initiateOffer(pcRequest.socketTo);
+                setUpdatedPcRequest(index, request.type);
+                return false;
+              case INITIATE_ANSWER:
+                setIsBusy(true);
+                initiateAnswers(request.value);
+                setUpdatedPcRequest(index, request.type);
+                return false;
+              case ADD_ANSWER:
+                setIsBusy(true);
+                addAnswer({ ...request.value, ...result });
+                setUpdatedPcRequest(index, request.type);
+                return false;
+              case GET_ICE_CANDIDATE:
+                setIsBusy(true);
+                setIceCandidates({
+                  pcId: pcRequest.id,
+                  candidates: request.value,
+                });
+                return false;
+              default:
+                return false;
+            }
+          } else {
+            return true;
+          }
+        });
+      }
+      return !flag;
+    });
+  }, [pcRequestQueue]);
+
+  useEffect(() => {
+    ice.forEach((iceCandidate, index) => {
+      if (!iceCandidate.isCompleted) {
+        socket.emit("send_ice_candidate", iceCandidate);
+        const iceCopy = ice.map((iceC, i) => {
+          if (index === i) {
+            const candidateCopy = { ...iceC };
+            candidateCopy.isCompleted = true;
+            return candidateCopy;
+          }
+          return iceC;
+        });
+        setIce(iceCopy);
+      }
+    });
+  }, [ice]);
+
+  const setUpdatedPcRequest = (index, type) => {
+    const updatedPcRequestQueue = pcRequestQueue.map((pr, i) => {
+      if (index === i) {
+        const requests = [...pr.requests];
+        const updatedRequests = requests.map((request) => {
+          if (request.type === type) {
+            const updatedRequest = { ...request };
+            updatedRequest.isCompleted = true;
+            return updatedRequest;
+          }
+          return request;
+        });
+        const updatedData = { ...pr };
+        updatedData.requests = updatedRequests;
+        return updatedData;
+      }
+      return pr;
+    });
+    setPcRequestQueue(updatedPcRequestQueue);
+  };
 
   useEffect(() => {
     if (!isObjectEmpty(track) && !track.isAdded) {
@@ -204,19 +333,21 @@ export default function Meet(props) {
       if (pc.iceConnectionState === "disconnected") {
       }
     };
-    // pc.addTransceiver()
 
     const candidates = [];
     pc.onicecandidate = (e) => {
       if (e.candidate) {
         candidates.push(e.candidate);
       } else {
-        const data = {
-          socketId,
-          candidates: candidates,
+        const result = {
           pcId,
+          candidates,
+          isCompleted: false,
+          socketId,
         };
-        socket.emit("send_ice_candidate", data);
+        const iceCopy = [...ice];
+        iceCopy.push(result);
+        setIce(iceCopy);
       }
     };
     pc.ontrack = (e) => {
@@ -250,9 +381,10 @@ export default function Meet(props) {
 
   const sendOffer = (peerConnection) => {
     const data = {
-      socketId: peerConnection.socket,
+      socketTo: peerConnection.socket,
       sdp: peerConnection.sdp,
       id: peerConnection.id,
+      socketFrom: socket.id,
     };
     const newPc = state.pc.map((peer) => {
       if (peer.socket === peerConnection.socket) {
@@ -268,11 +400,11 @@ export default function Meet(props) {
     }));
 
     socket.emit("send_offer", data);
+    setIsBusy(false);
   };
 
   const initiateAnswers = async (data) => {
     const pc = await initiatePeerConnection();
-
     if (state.stream !== undefined) {
       state.stream
         .getTracks()
@@ -293,7 +425,7 @@ export default function Meet(props) {
 
     const peerConnections = [...state.pc];
     const peerConnection = {
-      socket: data.socketId,
+      socket: data.socketFrom,
       id: data.id,
       sdp: pc.localDescription,
       pc,
@@ -309,14 +441,15 @@ export default function Meet(props) {
 
   const answerOffers = async (pc) => {
     const localDescription = await answerOffer(pc);
-    pc.setLocalDescription(localDescription);
+    await pc.setLocalDescription(localDescription);
   };
 
   const sendAnswer = (peerConnection) => {
     const data = {
-      socketId: peerConnection.socket,
+      socketTo: peerConnection.socket,
       sdp: peerConnection.sdp,
       id: peerConnection.id,
+      socketFrom: socket.id,
     };
     const newPc = state.pc.map((peer) => {
       if (peer.socket === peerConnection.socket) {
@@ -331,25 +464,46 @@ export default function Meet(props) {
       pc: newPc,
     }));
     socket.emit("send_answer", data);
+    setIsBusy(false);
   };
+
   const addAnswer = async (data) => {
     const pcId = data.id;
     const sdp = data.sdp;
     const peer = state.pc.filter((p) => p.id === pcId);
     const pc = peer?.[0].pc;
     await addRemoteDescription(pc, sdp);
+    setPcRequestQueueCompleted(pcId);
+
+    const iceCandidate = ice.filter((candidate) => candidate.pcId === pcId);
+    socket.emit("send_ice_candidate", {
+      socketTo: data.socketTo,
+      ...iceCandidate[0],
+    });
+    setIsBusy(false);
   };
 
-  const setIceCandidates = (data) => {
-    const pcId = data.pcId;
-    const candidates = data.candidates;
+  const setIceCandidates = ({ pcId, candidates }) => {
     const peer = state.pc.filter((p) => p.id === pcId);
     const pc = peer?.[0].pc;
     addIceCandidate(pc, candidates);
+    setPcRequestQueueCompleted(pcId);
+    setIsBusy(false);
   };
 
   const addTracksToVideo = (ref, stream) => {
     ref.current.srcObject = stream;
+  };
+  const setPcRequestQueueCompleted = (pcId) => {
+    const pcRequestQueueCopy = pcRequestQueue.map((pr) => {
+      if (pr.id === pcId) {
+        const prCopy = { ...pr };
+        prCopy.isCompleted = true;
+        return prCopy;
+      }
+      return pr;
+    });
+    setPcRequestQueue(pcRequestQueueCopy);
   };
 
   return (
