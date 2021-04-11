@@ -19,25 +19,24 @@ import {
   REQUEST_OFFER,
 } from "../utils/constants";
 import { makeStyles } from "@material-ui/styles";
-import { Box } from "@material-ui/core";
+import { Grid, useMediaQuery } from "@material-ui/core";
 import { isObjectEmpty } from "../utils/object";
+import BottomNavigation from "../components/BottomNavigation";
+import { desktopGridSize, mobileGridSize } from "../utils/gridSize";
 
 const useStyles = makeStyles({
   mainContainer: {
-    backgroundColor: "black",
+    backgroundColor: "#363636",
     width: "100%",
-    height: "100%",
+    height: "calc(100% - 100px)",
     position: "relative",
   },
   videoContainer: {
-    height: "425px",
-    maxWidth: "570px",
+    height: "100%",
     width: "100%",
-    maxHeight: "600px",
-    backgroundColor: "black",
-    borderRadius: "7px",
   },
   video: {
+    objectFit: "cover",
     width: "100%",
     height: "100%",
   },
@@ -53,6 +52,8 @@ export default function Meet(props) {
   const [state, setState] = useRecoilState(userState);
   const [user, setUser] = useRecoilState(userDetails);
 
+  const isDesktopWidth = useMediaQuery((theme) => theme.breakpoints.up("md"));
+
   const history = useHistory();
   const styles = useStyles();
   const videoRefs = useMemo(() => {
@@ -61,6 +62,15 @@ export default function Meet(props) {
       ref: createRef(),
     }));
   }, [state.pc]);
+
+  const { mobileGrid, desktopGrid } = useMemo(() => {
+    return {
+      mobileGrid: mobileGridSize(videoRefs.length),
+      desktopGrid: desktopGridSize(videoRefs.length),
+    };
+  }, [window.innerWidth,videoRefs]);
+
+  console.log(mobileGrid, desktopGrid,videoRefs);
 
   useEffect(
     () => {
@@ -506,13 +516,32 @@ export default function Meet(props) {
     setPcRequestQueue(pcRequestQueueCopy);
   };
 
+  const mediaHandler = () => {};
+
   return (
-    <div>
-      {videoRefs.map((v) => (
-        <Box key={v.id} className={styles.videoContainer} position="relative">
-          <video ref={v.ref} className={styles.video} autoPlay playsInline />
-        </Box>
-      ))}
+    <div className={styles.mainContainer}>
+      <Grid
+        container
+        direction="row"
+        justify="center"
+        alignItems="center"
+        spacing={0}
+      >
+        {videoRefs.map((v, index) => (
+          <Grid
+            key={index}
+            item
+            xs={mobileGrid.sizes[index]}
+            lg={desktopGrid.sizes[index]}
+            style={{
+              height: isDesktopWidth ? desktopGrid.height : mobileGrid.height,
+            }}
+          >
+            <video ref={v.ref} className={styles.video} autoPlay playsInline />
+          </Grid>
+        ))}
+      </Grid>
+      <BottomNavigation clickHandler={mediaHandler} />
     </div>
   );
 }

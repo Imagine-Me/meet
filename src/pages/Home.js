@@ -38,7 +38,7 @@ const useStyles = makeStyles((theme) => ({
     },
   },
   video: {
-    objectFit: "fill",
+    objectFit: "cover",
     width: "100%",
     height: "100%",
     borderRadius: "7px",

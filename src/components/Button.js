@@ -18,7 +18,7 @@ export const IconButton = ({ children, on, onClick }) => {
       color={on ? "default" : "secondary"}
       variant="contained"
       className={style.button}
-      onClick={onClick}
+      onClick={onClick ?? null}
     >
       {children}
     </Button>
