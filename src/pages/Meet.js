@@ -68,9 +68,9 @@ export default function Meet(props) {
       mobileGrid: mobileGridSize(videoRefs.length),
       desktopGrid: desktopGridSize(videoRefs.length),
     };
-  }, [window.innerWidth,videoRefs]);
+  }, [videoRefs]);
 
-  console.log(mobileGrid, desktopGrid,videoRefs);
+  console.log(mobileGrid, desktopGrid, videoRefs);
 
   useEffect(
     () => {
@@ -188,6 +188,7 @@ export default function Meet(props) {
         }
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socketListener]);
 
   useEffect(() => {
@@ -241,6 +242,7 @@ export default function Meet(props) {
       }
       return !flag;
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pcRequestQueue]);
 
   useEffect(() => {
@@ -258,6 +260,7 @@ export default function Meet(props) {
         setIce(iceCopy);
       }
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ice]);
 
   const setUpdatedPcRequest = (index, type) => {
