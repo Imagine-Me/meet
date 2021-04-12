@@ -13,10 +13,12 @@ export const initiatePeerConnection = () => {
 };
 
 export const createOffer = (pc) => {
-  return pc.createOffer({
-    offerToReceiveVideo: true,
-    offerToReceiveAudio: true,
-  });
+  return pc
+    .createOffer({
+      offerToReceiveVideo: true,
+      offerToReceiveAudio: true,
+    })
+    .then((sdp) => pc.setLocalDescription(sdp));
 };
 
 export const addRemoteDescription = (pc, sdp) => {
@@ -24,14 +26,19 @@ export const addRemoteDescription = (pc, sdp) => {
 };
 
 export const answerOffer = (pc) => {
-  return pc.createAnswer({
-    offerToReceiveVideo: true,
-    offerToReceiveAudio: true,
-  });
+  return pc
+    .createAnswer({
+      offerToReceiveVideo: true,
+      offerToReceiveAudio: true,
+    })
+    .then((sdp) => pc.setLocalDescription(sdp));
 };
 
 export const addIceCandidate = (pc, candidates) => {
   candidates.forEach((candidate) =>
     pc.addIceCandidate(new RTCIceCandidate(candidate))
   );
+};
+export const addTracksToVideo = (ref, stream) => {
+  ref.current.srcObject = stream;
 };

@@ -3,3 +3,4 @@ export const INITIATE_OFFER = "INITIATE_OFFER";
 export const ADD_ANSWER = "ADD_ANSWER";
 export const GET_ICE_CANDIDATE = "GET_ICE_CANDIDATE";
 export const REQUEST_OFFER = "REQUEST_OFFER";
+export const DISCONNECTED = "DISCONNECTED";

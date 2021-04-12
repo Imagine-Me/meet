@@ -70,7 +70,7 @@ export const desktopGridSize = (number) => {
     case 3:
       return {
         height: `${(window.innerHeight - 100) / 2}px`,
-        sizes: [6, 6, 12],
+        sizes: [6, 6, 6],
       };
     case 4:
       return {

@@ -66,7 +66,7 @@ export default function BottomNavigation({ clickHandler }) {
             />
           )}
         </IconButton>
-        <IconButton onClick={() => clickHandler("audio")} on={false}>
+        <IconButton onClick={() => clickHandler("disconnect")} on={false}>
           <Call width={25} height={25} color="white" />
         </IconButton>
       </div>
