@@ -29,12 +29,19 @@ export const completePcRequestArray = (pcRequestQueue, index) => {
   });
 };
 
-export const updatePcBeforeSendingOffer = (peerConnection, pc, socketId) => {
+export const updatePcBeforeSendingOffer = (
+  peerConnection,
+  pc,
+  socketId,
+  user
+) => {
   const data = {
     socketTo: peerConnection.socket,
     sdp: peerConnection.sdp,
     id: peerConnection.id,
     socketFrom: socketId,
+    name: user.name,
+    photo: user.photo,
   };
   const newPc = pc.map((peer) => {
     if (peer.socket === peerConnection.socket) {
@@ -50,6 +57,18 @@ export const updatePcBeforeSendingOffer = (peerConnection, pc, socketId) => {
 export const getPcById = (pc, id) => {
   const peer = pc.filter((p) => p.id === id);
   return peer?.[0].pc;
+};
+
+export const addUserDetailToPC = (pc, id, name, photo) => {
+  return pc.map((p) => {
+    if (p.id === id) {
+      const temp = { ...p };
+      temp.name = name;
+      temp.photo = photo;
+      return temp;
+    }
+    return p;
+  });
 };
 
 export const getPcBySocketId = (pc, socketId) => {

@@ -22,10 +22,11 @@ import {
   REQUEST_OFFER,
 } from "../utils/constants";
 import { makeStyles } from "@material-ui/styles";
-import { Grid, useMediaQuery } from "@material-ui/core";
+import { Avatar, Grid, Typography, useMediaQuery } from "@material-ui/core";
 import BottomNavigation from "../components/BottomNavigation";
 import { desktopGridSize, mobileGridSize } from "../utils/gridSize";
 import {
+  addUserDetailToPC,
   completePcRequestArray,
   getPcById,
   removeConnection,
@@ -64,6 +65,21 @@ const useStyles = makeStyles({
     top: "0",
     borderRadius: "5px",
   },
+  UserDesc: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 9999,
+    flexDirection: "column",
+  },
+  Grid: {
+    position: "relative",
+  },
 });
 
 export default function Meet(props) {
@@ -84,6 +100,8 @@ export default function Meet(props) {
     return state.pc.map((p) => ({
       id: p.id,
       ref: createRef(),
+      name: p.name,
+      photo: p.photo,
     }));
   }, [state.pc]);
 
@@ -109,7 +127,6 @@ export default function Meet(props) {
         history.push(`/?redirect=${link}`);
       }
       return () => {
-        console.log("closing all peers");
         state.pc.forEach((pc) => {
           pc.pc.close();
         });
@@ -437,7 +454,8 @@ export default function Meet(props) {
     const { data, newPc } = updatePcBeforeSendingOffer(
       peerConnection,
       state.pc,
-      socket.id
+      socket.id,
+      user
     );
     setState((oldState) => ({
       ...oldState,
@@ -476,6 +494,8 @@ export default function Meet(props) {
     const peerConnection = {
       socket: data.socketFrom,
       id: data.id,
+      name: data.name,
+      photo: data.photo,
       sdp: pc.localDescription,
       pc,
       method: "answer",
@@ -492,7 +512,8 @@ export default function Meet(props) {
     const { data, newPc } = updatePcBeforeSendingOffer(
       peerConnection,
       state.pc,
-      socket.id
+      socket.id,
+      user
     );
     setState((oldState) => ({
       ...oldState,
@@ -517,6 +538,11 @@ export default function Meet(props) {
       socketTo: data.socketTo,
       ...iceCandidate[0],
     });
+    const newPcs = addUserDetailToPC(state.pc, pcId, data.name, data.photo);
+    setState((oldState) => ({
+      ...oldState,
+      pc: newPcs,
+    }));
     setIsBusy(false);
   };
 
@@ -576,6 +602,7 @@ export default function Meet(props) {
         {videoRefs.map((v, index) => (
           <Grid
             key={index}
+            className={styles.Grid}
             item
             xs={mobileGrid.sizes[index]}
             lg={desktopGrid.sizes[index]}
@@ -584,6 +611,12 @@ export default function Meet(props) {
             }}
           >
             <video ref={v.ref} className={styles.video} autoPlay playsInline />
+            <div className={styles.UserDesc}>
+              <Avatar alt={v.name} src={v.photo} />
+              <Typography variant="h6" color="secondary">
+                {v.name}
+              </Typography>
+            </div>
           </Grid>
         ))}
       </Grid>

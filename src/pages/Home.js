@@ -118,7 +118,9 @@ export default function Home(props) {
         ...oldState,
         stream,
       }));
-      videoRef.current.srcObject = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
     }
     getUserMediaStream();
     // eslint-disable-next-line react-hooks/exhaustive-deps
