@@ -23,21 +23,25 @@ import { fetchApi } from "../utils/fetch";
 import useQuery from "../hooks/useQuery";
 import { useHistory } from "react-router";
 
-const useStyles = makeStyles({
+const useStyles = makeStyles((theme) => ({
   body: {
     height: "100%",
   },
   videoContainer: {
     height: "425px",
-    maxWidth: "570px",
     width: "100%",
-    maxHeight: "600px",
     backgroundColor: "black",
     borderRadius: "7px",
+    margin: "auto",
+    [theme.breakpoints.up("lg")]: {
+      maxWidth: "570px",
+    },
   },
   video: {
+    objectFit: "cover",
     width: "100%",
     height: "100%",
+    borderRadius: "7px",
   },
   videoFooter: {
     position: "absolute",
@@ -66,7 +70,18 @@ const useStyles = makeStyles({
     marginTop: "10px",
     cursor: "pointer",
   },
-});
+  bodyMargin: {
+    margin: "50px 15px",
+    [theme.breakpoints.up("lg")]: {
+      margin: "50px 45px",
+    },
+  },
+  formContainer: {
+    [theme.breakpoints.up("lg")]: {
+      maxWidth: "450px",
+    },
+  },
+}));
 
 export default function Home(props) {
   const [modal, setModal] = useState(false);
@@ -103,7 +118,9 @@ export default function Home(props) {
         ...oldState,
         stream,
       }));
-      videoRef.current.srcObject = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
     }
     getUserMediaStream();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -118,6 +135,7 @@ export default function Home(props) {
             isAuthenticated: true,
             name: u.displayName,
             email: u.email,
+            photo: u.photoURL,
           }));
         } else {
           setModal(true);
@@ -210,14 +228,19 @@ export default function Home(props) {
   return (
     <div className={style.body}>
       <Navigation modalHandler={() => setModal(true)} />
-      <Box height="90%" display="flex" alignItems="center" marginX={10}>
+      <Box
+        className={style.bodyMargin}
+        height="90%"
+        display="flex"
+        alignItems="center"
+      >
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} md={6}>
-            <Box>
+            <Box className={style.formContainer}>
               <Typography variant="h4" color="textPrimary">
                 Start instant meeting
               </Typography>
-              <Box maxWidth="350px">
+              <Box>
                 <Button
                   color="primary"
                   variant="contained"

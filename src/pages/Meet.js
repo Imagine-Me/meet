@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState, createRef, useRef } from "react";
 import { useHistory } from "react-router";
 import { useRecoilState } from "recoil";
 import { v4 as uuidv4 } from "uuid";
@@ -9,46 +9,115 @@ import {
   answerOffer,
   createOffer,
   initiatePeerConnection,
+  addTracksToVideo,
+  getUserStream,
 } from "../utils/Video";
 import { io } from "socket.io-client";
 import {
   ADD_ANSWER,
+  DISCONNECTED,
   GET_ICE_CANDIDATE,
   INITIATE_ANSWER,
   INITIATE_OFFER,
+  REQUEST_OFFER,
+  AUDIO_TOGGLE,
 } from "../utils/constants";
 import { makeStyles } from "@material-ui/styles";
+import { Avatar, Grid, Typography, useMediaQuery } from "@material-ui/core";
+import BottomNavigation from "../components/BottomNavigation";
+import { desktopGridSize, mobileGridSize } from "../utils/gridSize";
+import {
+  addUserDetailToPC,
+  completePcRequestArray,
+  getPcById,
+  removeConnection,
+  setPcRequestQueueCompletedArray,
+  toggleAudio,
+  updatePcBeforeSendingOffer,
+  updatePcRequestArray,
+} from "../utils/helper";
+import { IconButton } from "../components/Button";
+import { AudioOff } from "../icons/Audio";
 
 const useStyles = makeStyles({
   mainContainer: {
-    backgroundColor: "black",
+    backgroundColor: "#363636",
     width: "100%",
-    height: "100%",
+    height: "calc(100% - 100px)",
     position: "relative",
   },
   videoContainer: {
-    height: "425px",
-    maxWidth: "570px",
+    height: "100%",
     width: "100%",
-    maxHeight: "600px",
-    backgroundColor: "black",
-    borderRadius: "7px",
   },
   video: {
+    objectFit: "cover",
     width: "100%",
     height: "100%",
+  },
+  selfVideo: {
+    objectFit: "cover",
+    width: "100%",
+    height: `calc(${window.innerHeight}px - 100px)`,
+  },
+  selfVideo2: {
+    objectFit: "cover",
+    width: "200px",
+    height: "120px",
+    position: "absolute",
+    right: "0",
+    top: "0",
+    borderRadius: "5px",
+  },
+  UserDesc: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: -1,
+    flexDirection: "column",
+  },
+  Grid: {
+    position: "relative",
   },
 });
 
 export default function Meet(props) {
   const [socket, setSocket] = useState(null);
-  const [call, setCall] = useState({});
+  const [isBusy, setIsBusy] = useState(false);
+  const [track, setTrack] = useState([]);
+  const [pcRequestQueue, setPcRequestQueue] = useState([]);
+  const [socketListener, setSocketListener] = useState(null);
+  const [ice, setIce] = useState([]);
   const [state, setState] = useRecoilState(userState);
   const [user, setUser] = useRecoilState(userDetails);
 
+  const isDesktopWidth = useMediaQuery((theme) => theme.breakpoints.up("md"));
+
   const history = useHistory();
   const styles = useStyles();
-  const videoRef = useRef(null);
+  const videoRefs = useMemo(() => {
+    return state.pc.map((p) => ({
+      id: p.id,
+      ref: createRef(),
+      name: p.name,
+      photo: p.photo,
+      audio: p.audio,
+    }));
+  }, [state.pc]);
+
+  const selfVideoRef = useRef();
+
+  const { mobileGrid, desktopGrid } = useMemo(() => {
+    return {
+      mobileGrid: mobileGridSize(videoRefs.length),
+      desktopGrid: desktopGridSize(videoRefs.length),
+    };
+  }, [videoRefs]);
 
   useEffect(
     () => {
@@ -62,6 +131,16 @@ export default function Meet(props) {
       } else {
         history.push(`/?redirect=${link}`);
       }
+      return () => {
+        state.pc.forEach((pc) => {
+          pc.pc.close();
+        });
+        setState((oldState) => ({
+          ...oldState,
+          link: null,
+          pc: [],
+        }));
+      };
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
@@ -77,62 +156,231 @@ export default function Meet(props) {
           socketId,
         }));
       });
-      socket.on("user_joined", (data) => {
-        if (data !== socket.id) {
-          // A NEW USER JOINED CREATE AN OFFER
-          const result = {
-            type: INITIATE_OFFER,
-            value: data,
-          };
-          setCall(result);
-        }
+
+      socket.on("get_users", (data) => {
+        const initialUsers = data.map((value) => ({
+          isCompleted: false,
+          socketTo: value,
+          requests: [{ type: REQUEST_OFFER, isCompleted: false }],
+          id: undefined,
+        }));
+        setSocketListener(initialUsers);
       });
+
+      socket.on("get_offer_request", (data) => {
+        const result = {
+          socketTo: data,
+          id: null,
+          requests: [{ type: INITIATE_OFFER, isCompleted: false }],
+          isCompleted: false,
+        };
+        setSocketListener(result);
+      });
+
       socket.on("get_offer", (data) => {
         const result = {
-          type: INITIATE_ANSWER,
-          value: data,
+          id: data.id,
+          socketTo: data.socketFrom,
+          requests: [
+            { type: INITIATE_ANSWER, isCompleted: false, value: data },
+          ],
         };
-        setCall(result);
+        setSocketListener(result);
       });
+
       socket.on("get_answer", function (data) {
         const result = {
-          type: ADD_ANSWER,
-          value: data,
+          id: data.id,
+          socketTo: data.socketFrom,
+          requests: [{ type: ADD_ANSWER, value: data, isCompleted: false }],
         };
-        setCall(result);
+        setSocketListener(result);
       });
+
       socket.on("get_ice_candidates", (data) => {
         const result = {
-          type: GET_ICE_CANDIDATE,
-          value: data,
+          isCompleted: false,
+          id: data.pcId,
+          requests: [
+            {
+              type: GET_ICE_CANDIDATE,
+              value: data.candidates,
+              isCompleted: false,
+            },
+          ],
         };
-        setCall(result);
+        setSocketListener(result);
+      });
+
+      socket.on(AUDIO_TOGGLE, function (data) {
+        if (data.socket !== this.id) {
+          const result = {
+            isCompleted: false,
+            requests: [{ type: AUDIO_TOGGLE, value: data, isCompleted: false }],
+          };
+
+          setSocketListener(result);
+        }
+      });
+
+      socket.on("disconnected", function (data) {
+        const result = {
+          isCompleted: false,
+          requests: [{ type: DISCONNECTED, value: data, isCompleted: false }],
+        };
+        setSocketListener(result);
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket]);
 
   useEffect(() => {
-    const type = call?.type;
-    switch (type) {
-      case INITIATE_OFFER:
-        initiateOffer(call.value);
-        break;
-      case INITIATE_ANSWER:
-        initiateAnswers(call.value);
-        break;
-      case ADD_ANSWER:
-        addAnswer(call.value);
-        break;
-      case GET_ICE_CANDIDATE:
-        setIceCandidates(call.value);
-        break;
-      default:
-        break;
+    if (socketListener !== null) {
+      if (Array.isArray(socketListener)) {
+        setPcRequestQueue(socketListener);
+      } else {
+        if (socketListener.id) {
+          const pcRequestQueueCopy = pcRequestQueue.map((pr) => {
+            if (
+              pr.id === socketListener.id ||
+              pr.socketTo === socketListener.socketTo
+            ) {
+              const prCopy = { ...pr };
+              prCopy.id = socketListener.id;
+              const requestCopy = [...prCopy.requests];
+              const updatedRequest = requestCopy.concat(
+                socketListener.requests
+              );
+              prCopy.requests = updatedRequest;
+              return prCopy;
+            }
+            return pr;
+          });
+          setPcRequestQueue(pcRequestQueueCopy);
+        } else {
+          const pcRequestQueueCopy = [...pcRequestQueue];
+          pcRequestQueueCopy.push(socketListener);
+          setPcRequestQueue(pcRequestQueueCopy);
+        }
+      }
     }
-
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [call]);
+  }, [socketListener]);
+
+  useEffect(() => {
+    let flag = false;
+    pcRequestQueue.every((pcRequest, index) => {
+      if (isBusy) {
+        return false;
+      }
+      if (!pcRequest.isCompleted) {
+        flag = true;
+        pcRequest.requests.every((request) => {
+          const result = {
+            socketFrom: socket.id,
+            socketTo: pcRequest.socketTo,
+          };
+          if (!request.isCompleted) {
+            switch (request.type) {
+              case REQUEST_OFFER:
+                socket.emit("get_offer", result);
+                setPcRequestQueue(
+                  updatePcRequestArray(pcRequestQueue, index, request.type)
+                );
+                return false;
+              case INITIATE_OFFER:
+                setIsBusy(true);
+                initiateOffer(pcRequest.socketTo);
+                setPcRequestQueue(
+                  updatePcRequestArray(pcRequestQueue, index, request.type)
+                );
+                return false;
+              case INITIATE_ANSWER:
+                setIsBusy(true);
+                initiateAnswers(request.value);
+                setPcRequestQueue(
+                  updatePcRequestArray(pcRequestQueue, index, request.type)
+                );
+                return false;
+              case ADD_ANSWER:
+                setIsBusy(true);
+                addAnswer({ ...request.value, ...result });
+                setPcRequestQueue(
+                  updatePcRequestArray(pcRequestQueue, index, request.type)
+                );
+                return false;
+              case GET_ICE_CANDIDATE:
+                setIsBusy(true);
+                setIceCandidates({
+                  pcId: pcRequest.id,
+                  candidates: request.value,
+                });
+                return false;
+              case DISCONNECTED:
+                setIsBusy(true);
+                const updatedPc = removeConnection(state.pc, request.value);
+                setState((oldState) => ({
+                  ...oldState,
+                  pc: updatedPc,
+                }));
+                setPcRequestQueue(
+                  completePcRequestArray(pcRequestQueue, index)
+                );
+                setIsBusy(false);
+                return false;
+              case AUDIO_TOGGLE:
+                setIsBusy(true);
+                const updatedPcs = toggleAudio(state.pc, request.value);
+                setState((oldState) => ({
+                  ...oldState,
+                  pc: updatedPcs,
+                }));
+                setPcRequestQueue(
+                  completePcRequestArray(pcRequestQueue, index)
+                );
+                setIsBusy(false);
+                return false;
+              default:
+                return false;
+            }
+          } else {
+            return true;
+          }
+        });
+      }
+      return !flag;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pcRequestQueue]);
+
+  useEffect(() => {
+    ice.forEach((iceCandidate, index) => {
+      if (!iceCandidate.isCompleted) {
+        socket.emit("send_ice_candidate", iceCandidate);
+        const iceCopy = ice.map((iceC, i) => {
+          if (index === i) {
+            const candidateCopy = { ...iceC };
+            candidateCopy.isCompleted = true;
+            return candidateCopy;
+          }
+          return iceC;
+        });
+        setIce(iceCopy);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ice]);
+
+  useEffect(() => {
+    videoRefs.forEach((videoRef) => {
+      let mediaTrack = track.filter((t) => t.id === videoRef.id);
+      mediaTrack = mediaTrack?.[0]?.stream;
+      if (mediaTrack) {
+        addTracksToVideo(videoRef.ref, mediaTrack);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videoRefs, track]);
 
   useEffect(() => {
     state.pc.forEach((pc) => {
@@ -156,6 +404,28 @@ export default function Meet(props) {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.pc]);
+
+  useEffect(() => {
+    async function getUserMediaStream() {
+      if (state.stream) {
+        state.stream.getTracks().forEach(function (track) {
+          track.stop();
+        });
+      }
+      const stream = await getUserStream(state.constraints);
+      setState((oldState) => ({
+        ...oldState,
+        stream,
+      }));
+      if (selfVideoRef.current) {
+        selfVideoRef.current.srcObject = stream;
+      }
+      // videoRef.current.srcObject = stream;
+    }
+    getUserMediaStream();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.constraints]);
+
   const initiateOffer = async (socketId) => {
     const pc = await initiatePeerConnection();
     const pcId = uuidv4();
@@ -165,30 +435,33 @@ export default function Meet(props) {
         .getTracks()
         .forEach((track) => pc.addTrack(track, state.stream));
     }
-    pc.oniceconnectionstatechange = () => {
-      if (pc.iceConnectionState === "disconnected") {
-      }
-    };
-    // pc.addTransceiver()
 
     const candidates = [];
     pc.onicecandidate = (e) => {
       if (e.candidate) {
         candidates.push(e.candidate);
       } else {
-        const data = {
-          socketId,
-          candidates: candidates,
+        const result = {
           pcId,
+          candidates,
+          isCompleted: false,
+          socketId,
         };
-        socket.emit("send_ice_candidate", data);
+        const iceCopy = [...ice];
+        iceCopy.push(result);
+        setIce(iceCopy);
       }
     };
     pc.ontrack = (e) => {
-      console.log("INCOMING STREAM", e);
-      videoRef.current.srcObject = e.streams[0];
+      const updatedTrack = [...track];
+      const data = {
+        id: pcId,
+        stream: e.streams[0],
+      };
+      updatedTrack.push(data);
+      setTrack(updatedTrack);
     };
-    pc.onnegotiationneeded = await createOffers(pc);
+    pc.onnegotiationneeded = await createOffer(pc);
     const peerConnections = [...state.pc];
     const peerConnection = {
       id: pcId,
@@ -205,36 +478,25 @@ export default function Meet(props) {
     }));
   };
 
-  const createOffers = (pc) => {
-    return createOffer(pc).then((sdp) => pc.setLocalDescription(sdp));
-  };
-
   const sendOffer = (peerConnection) => {
-    console.log("SENDING OFFER...");
-    const data = {
-      socketId: peerConnection.socket,
-      sdp: peerConnection.sdp,
-      id: peerConnection.id,
-    };
-    const newPc = state.pc.map((peer) => {
-      if (peer.socket === peerConnection.socket) {
-        const p = { ...peer };
-        p.isCompleted = true;
-        return p;
-      }
-      return peer;
-    });
+    const { data, newPc } = updatePcBeforeSendingOffer(
+      peerConnection,
+      state.pc,
+      socket.id,
+      user,
+      state.constraints
+    );
     setState((oldState) => ({
       ...oldState,
       pc: newPc,
     }));
 
     socket.emit("send_offer", data);
+    setIsBusy(false);
   };
 
   const initiateAnswers = async (data) => {
     const pc = await initiatePeerConnection();
-
     if (state.stream !== undefined) {
       state.stream
         .getTracks()
@@ -242,17 +504,28 @@ export default function Meet(props) {
     }
 
     pc.ontrack = (e) => {
-      console.log("INCOMING STREAM", e);
-      videoRef.current.srcObject = e.streams[0];
+      const updatedTrack = [...track];
+      const datas = {
+        id: data.id,
+        stream: e.streams[0],
+      };
+      updatedTrack.push(datas);
+      setTrack(updatedTrack);
     };
-
-    await addRemoteDescription(pc, data.sdp);
-    await answerOffers(pc);
+    try {
+      await addRemoteDescription(pc, data.sdp);
+    } catch {
+      console.log("An error occurred");
+    }
+    await answerOffer(pc);
 
     const peerConnections = [...state.pc];
     const peerConnection = {
-      socket: data.socketId,
+      socket: data.socketFrom,
       id: data.id,
+      name: data.name,
+      photo: data.photo,
+      audio: data.audio,
       sdp: pc.localDescription,
       pc,
       method: "answer",
@@ -265,51 +538,150 @@ export default function Meet(props) {
     }));
   };
 
-  const answerOffers = async (pc) => {
-    const localDescription = await answerOffer(pc);
-    pc.setLocalDescription(localDescription);
-  };
-
   const sendAnswer = (peerConnection) => {
-    const data = {
-      socketId: peerConnection.socket,
-      sdp: peerConnection.sdp,
-      id: peerConnection.id,
-    };
-    const newPc = state.pc.map((peer) => {
-      if (peer.socket === peerConnection.socket) {
-        const p = { ...peer };
-        p.isCompleted = true;
-        return p;
-      }
-      return peer;
-    });
+    const { data, newPc } = updatePcBeforeSendingOffer(
+      peerConnection,
+      state.pc,
+      socket.id,
+      user,
+      state.constraints
+    );
     setState((oldState) => ({
       ...oldState,
       pc: newPc,
     }));
     socket.emit("send_answer", data);
+    setIsBusy(false);
   };
+
   const addAnswer = async (data) => {
     const pcId = data.id;
     const sdp = data.sdp;
-    const peer = state.pc.filter((p) => p.id === pcId);
-    const pc = peer?.[0].pc;
-    await addRemoteDescription(pc, sdp);
+    const pc = getPcById(state.pc, pcId);
+    try {
+      await addRemoteDescription(pc, sdp);
+    } catch {
+      console.log("Error occurred");
+    }
+    setPcRequestQueue(setPcRequestQueueCompletedArray(pcRequestQueue, pcId));
+    const iceCandidate = ice.filter((candidate) => candidate.pcId === pcId);
+    socket.emit("send_ice_candidate", {
+      socketTo: data.socketTo,
+      ...iceCandidate[0],
+    });
+    const newPcs = addUserDetailToPC(
+      state.pc,
+      pcId,
+      data.name,
+      data.photo,
+      data.audio
+    );
+    setState((oldState) => ({
+      ...oldState,
+      pc: newPcs,
+    }));
+    setIsBusy(false);
   };
 
-  const setIceCandidates = (data) => {
-    console.log("Adding candidates..");
-    const pcId = data.pcId;
-    const candidates = data.candidates;
-    const peer = state.pc.filter((p) => p.id === pcId);
-    const pc = peer?.[0].pc;
+  const setIceCandidates = ({ pcId, candidates }) => {
+    const pc = getPcById(state.pc, pcId);
     addIceCandidate(pc, candidates);
+    setPcRequestQueue(setPcRequestQueueCompletedArray(pcRequestQueue, pcId));
+    setIsBusy(false);
+  };
+
+  const mediaHandler = async (type) => {
+    switch (type) {
+      case "disconnect":
+        socket.disconnect();
+        history.push("/");
+        break;
+      case "video":
+        const constraints = { ...state.constraints };
+        constraints.video = !constraints.video;
+        setState((oldState) => ({
+          ...oldState,
+          constraints,
+        }));
+        break;
+      case "audio":
+        const mediaContraints = { ...state.constraints };
+        mediaContraints.audio = !mediaContraints.audio;
+        setState((oldState) => ({
+          ...oldState,
+          constraints: mediaContraints,
+        }));
+        socket.emit("toggle_audio", {
+          audio: mediaContraints.audio,
+        });
+        break;
+      default:
+        break;
+    }
   };
 
   return (
     <div className={styles.mainContainer}>
-      <video ref={videoRef} className={styles.video} autoPlay playsInline />
+      <Grid
+        container
+        direction="row"
+        justify="center"
+        alignItems="center"
+        spacing={0}
+      >
+        {videoRefs.length === 0 ? (
+          <video
+            className={styles.selfVideo}
+            ref={selfVideoRef}
+            autoPlay
+            playsInline
+            muted
+          />
+        ) : (
+          <video
+            className={styles.selfVideo2}
+            ref={selfVideoRef}
+            autoPlay
+            playsInline
+            muted
+          />
+        )}
+
+        {videoRefs.map((v, index) => (
+          <Grid
+            key={index}
+            className={styles.Grid}
+            item
+            xs={mobileGrid.sizes[index]}
+            lg={desktopGrid.sizes[index]}
+            style={{
+              height: isDesktopWidth ? desktopGrid.height : mobileGrid.height,
+            }}
+          >
+            <div className={styles.UserDesc}>
+              <Avatar alt={v.name} src={v.photo} />
+              <Typography variant="h6" color="secondary">
+                {v.name}
+              </Typography>
+            </div>
+            <div>
+              {v.audio ? null : (
+                <IconButton isSmall>
+                  <AudioOff width={14} height={14} fill="white" />
+                </IconButton>
+              )}
+            </div>
+            <video
+              ref={v.ref}
+              className={styles.video}
+              autoPlay
+              playsInline
+              muted={!v.audio}
+            />
+          </Grid>
+        ))}
+      </Grid>
+      <BottomNavigation clickHandler={mediaHandler} />
     </div>
   );
 }

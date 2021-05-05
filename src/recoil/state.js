@@ -5,7 +5,7 @@ export const state = atom({
   default: {
     stream: null,
     constraints: {
-      audio: false,
+      audio: true,
       video: false,
     },
     link: null,
@@ -20,6 +20,7 @@ export const user = atom({
     isAuthenticated: false,
     name: null,
     email: null,
+    photo: null,
     socketId: null,
   },
 });

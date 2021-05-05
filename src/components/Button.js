@@ -3,22 +3,30 @@ import { makeStyles } from "@material-ui/styles";
 
 const useStyles = makeStyles({
   button: {
-    width: "65px",
-    height: "65px",
     borderRadius: "100%",
     padding: "0",
     margin: "0 10px",
   },
+  small: {
+    width: "20px",
+    height: "20px",
+    minWidth: "20px"
+  },
+  big: {
+    width: "65px",
+    height: "65px",
+  },
 });
 
-export const IconButton = ({ children, on, onClick }) => {
+export const IconButton = ({ children, on, onClick, isSmall }) => {
   const style = useStyles();
   return (
     <Button
       color={on ? "default" : "secondary"}
       variant="contained"
-      className={style.button}
-      onClick={onClick}
+      size={isSmall ? "small": "large"}
+      className={[style.button, isSmall ? style.small : style.big].join(" ")}
+      onClick={onClick ?? null}
     >
       {children}
     </Button>

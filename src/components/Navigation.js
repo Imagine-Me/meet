@@ -1,18 +1,29 @@
-import { Box, Button, Typography } from "@material-ui/core";
+import { Box, Button, makeStyles, Typography } from "@material-ui/core";
 import { useRecoilValue } from "recoil";
 import { user as userState } from "../recoil/state";
 
 import User from "../icons/user";
 import VideoIcon from "../icons/videoIcon";
 
+const useStyles = makeStyles((theme) => ({
+  bodyMargin: {
+    margin: "0 15px",
+    [theme.breakpoints.up("lg")]: {
+      margin: "0 45px",
+    },
+  },
+}));
+
 export default function Navigation({ modalHandler }) {
   const user = useRecoilValue(userState);
+
+  const classes = useStyles();
   return (
     <Box
       display="flex"
       alignItems="center"
       justifyContent="space-between"
-      marginX={10}
+      className={classes.bodyMargin}
       flexDirection="row"
     >
       <div style={{ display: "flex", alignItems: "center" }}>
