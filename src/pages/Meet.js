@@ -20,6 +20,7 @@ import {
   INITIATE_ANSWER,
   INITIATE_OFFER,
   REQUEST_OFFER,
+  AUDIO_TOGGLE,
 } from "../utils/constants";
 import { makeStyles } from "@material-ui/styles";
 import { Avatar, Grid, Typography, useMediaQuery } from "@material-ui/core";
@@ -31,9 +32,12 @@ import {
   getPcById,
   removeConnection,
   setPcRequestQueueCompletedArray,
+  toggleAudio,
   updatePcBeforeSendingOffer,
   updatePcRequestArray,
 } from "../utils/helper";
+import { IconButton } from "../components/Button";
+import { AudioOff } from "../icons/Audio";
 
 const useStyles = makeStyles({
   mainContainer: {
@@ -74,7 +78,7 @@ const useStyles = makeStyles({
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    zIndex: 9999,
+    zIndex: -1,
     flexDirection: "column",
   },
   Grid: {
@@ -102,6 +106,7 @@ export default function Meet(props) {
       ref: createRef(),
       name: p.name,
       photo: p.photo,
+      audio: p.audio,
     }));
   }, [state.pc]);
 
@@ -205,6 +210,17 @@ export default function Meet(props) {
           ],
         };
         setSocketListener(result);
+      });
+
+      socket.on(AUDIO_TOGGLE, function (data) {
+        if (data.socket !== this.id) {
+          const result = {
+            isCompleted: false,
+            requests: [{ type: AUDIO_TOGGLE, value: data, isCompleted: false }],
+          };
+
+          setSocketListener(result);
+        }
       });
 
       socket.on("disconnected", function (data) {
@@ -312,6 +328,17 @@ export default function Meet(props) {
                 );
                 setIsBusy(false);
                 return false;
+              case AUDIO_TOGGLE:
+                setIsBusy(true);
+                const updatedPcs = toggleAudio(state.pc, request.value);
+                setState((oldState) => ({
+                  ...oldState,
+                  pc: updatedPcs,
+                }));
+                setPcRequestQueue(
+                  completePcRequestArray(pcRequestQueue, index)
+                );
+                setIsBusy(false);
               default:
                 return false;
             }
@@ -455,7 +482,8 @@ export default function Meet(props) {
       peerConnection,
       state.pc,
       socket.id,
-      user
+      user,
+      state.constraints
     );
     setState((oldState) => ({
       ...oldState,
@@ -496,6 +524,7 @@ export default function Meet(props) {
       id: data.id,
       name: data.name,
       photo: data.photo,
+      audio: data.audio,
       sdp: pc.localDescription,
       pc,
       method: "answer",
@@ -513,7 +542,8 @@ export default function Meet(props) {
       peerConnection,
       state.pc,
       socket.id,
-      user
+      user,
+      state.constraints
     );
     setState((oldState) => ({
       ...oldState,
@@ -538,7 +568,13 @@ export default function Meet(props) {
       socketTo: data.socketTo,
       ...iceCandidate[0],
     });
-    const newPcs = addUserDetailToPC(state.pc, pcId, data.name, data.photo);
+    const newPcs = addUserDetailToPC(
+      state.pc,
+      pcId,
+      data.name,
+      data.photo,
+      data.audio
+    );
     setState((oldState) => ({
       ...oldState,
       pc: newPcs,
@@ -566,6 +602,17 @@ export default function Meet(props) {
           ...oldState,
           constraints,
         }));
+        break;
+      case "audio":
+        const mediaContraints = { ...state.constraints };
+        mediaContraints.audio = !mediaContraints.audio;
+        setState((oldState) => ({
+          ...oldState,
+          constraints: mediaContraints,
+        }));
+        socket.emit("toggle_audio", {
+          audio: mediaContraints.audio,
+        });
         break;
       default:
         break;
@@ -610,13 +657,26 @@ export default function Meet(props) {
               height: isDesktopWidth ? desktopGrid.height : mobileGrid.height,
             }}
           >
-            <video ref={v.ref} className={styles.video} autoPlay playsInline />
             <div className={styles.UserDesc}>
               <Avatar alt={v.name} src={v.photo} />
               <Typography variant="h6" color="secondary">
                 {v.name}
               </Typography>
             </div>
+            <div>
+              {v.audio ? null : (
+                <IconButton isSmall>
+                  <AudioOff width={14} height={14} fill="white" />
+                </IconButton>
+              )}
+            </div>
+            <video
+              ref={v.ref}
+              className={styles.video}
+              autoPlay
+              playsInline
+              muted={!v.audio}
+            />
           </Grid>
         ))}
       </Grid>

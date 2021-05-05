@@ -1,6 +1,10 @@
 export const getUserStream = async (constraints) => {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    const c = {
+      video: constraints.video,
+      audio: true,
+    };
+    const stream = await navigator.mediaDevices.getUserMedia(c);
     return stream;
   } catch (e) {}
 };

@@ -33,7 +33,8 @@ export const updatePcBeforeSendingOffer = (
   peerConnection,
   pc,
   socketId,
-  user
+  user,
+  constraints
 ) => {
   const data = {
     socketTo: peerConnection.socket,
@@ -42,6 +43,7 @@ export const updatePcBeforeSendingOffer = (
     socketFrom: socketId,
     name: user.name,
     photo: user.photo,
+    audio: constraints.audio,
   };
   const newPc = pc.map((peer) => {
     if (peer.socket === peerConnection.socket) {
@@ -59,12 +61,24 @@ export const getPcById = (pc, id) => {
   return peer?.[0].pc;
 };
 
-export const addUserDetailToPC = (pc, id, name, photo) => {
+export const addUserDetailToPC = (pc, id, name, photo, audio) => {
   return pc.map((p) => {
     if (p.id === id) {
       const temp = { ...p };
       temp.name = name;
       temp.photo = photo;
+      temp.audio = audio;
+      return temp;
+    }
+    return p;
+  });
+};
+
+export const toggleAudio = (pc, { socket, audio }) => {
+  return pc.map((p) => {
+    if (p.socket === socket) {
+      const temp = { ...p };
+      temp.audio = audio;
       return temp;
     }
     return p;
