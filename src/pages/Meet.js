@@ -339,6 +339,7 @@ export default function Meet(props) {
                   completePcRequestArray(pcRequestQueue, index)
                 );
                 setIsBusy(false);
+                return false;
               default:
                 return false;
             }
