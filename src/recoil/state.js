@@ -20,6 +20,7 @@ export const user = atom({
     isAuthenticated: false,
     name: null,
     email: null,
+    photo: null,
     socketId: null,
   },
 });

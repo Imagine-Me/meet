@@ -133,6 +133,7 @@ export default function Home(props) {
             isAuthenticated: true,
             name: u.displayName,
             email: u.email,
+            photo: u.photoURL,
           }));
         } else {
           setModal(true);

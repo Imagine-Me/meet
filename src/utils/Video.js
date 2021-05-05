@@ -13,6 +13,7 @@ export const initiatePeerConnection = () => {
 };
 
 export const createOffer = (pc) => {
+  console.log("CREATED OFFER");
   return pc
     .createOffer({
       offerToReceiveVideo: true,

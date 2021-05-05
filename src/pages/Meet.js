@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, createRef } from "react";
+import { useEffect, useMemo, useState, createRef, useRef } from "react";
 import { useHistory } from "react-router";
 import { useRecoilState } from "recoil";
 import { v4 as uuidv4 } from "uuid";
@@ -10,6 +10,7 @@ import {
   createOffer,
   initiatePeerConnection,
   addTracksToVideo,
+  getUserStream,
 } from "../utils/Video";
 import { io } from "socket.io-client";
 import {
@@ -22,7 +23,6 @@ import {
 } from "../utils/constants";
 import { makeStyles } from "@material-ui/styles";
 import { Grid, useMediaQuery } from "@material-ui/core";
-import { isObjectEmpty } from "../utils/object";
 import BottomNavigation from "../components/BottomNavigation";
 import { desktopGridSize, mobileGridSize } from "../utils/gridSize";
 import {
@@ -50,6 +50,20 @@ const useStyles = makeStyles({
     width: "100%",
     height: "100%",
   },
+  selfVideo: {
+    objectFit: "cover",
+    width: "100%",
+    height: `calc(${window.innerHeight}px - 100px)`,
+  },
+  selfVideo2: {
+    objectFit: "cover",
+    width: "200px",
+    height: "120px",
+    position: "absolute",
+    right: "0",
+    top: "0",
+    borderRadius: "5px",
+  },
 });
 
 export default function Meet(props) {
@@ -72,6 +86,8 @@ export default function Meet(props) {
       ref: createRef(),
     }));
   }, [state.pc]);
+
+  const selfVideoRef = useRef();
 
   const { mobileGrid, desktopGrid } = useMemo(() => {
     return {
@@ -343,6 +359,28 @@ export default function Meet(props) {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.pc]);
+
+  useEffect(() => {
+    async function getUserMediaStream() {
+      if (state.stream) {
+        state.stream.getTracks().forEach(function (track) {
+          track.stop();
+        });
+      }
+      const stream = await getUserStream(state.constraints);
+      setState((oldState) => ({
+        ...oldState,
+        stream,
+      }));
+      if (selfVideoRef.current) {
+        selfVideoRef.current.srcObject = stream;
+      }
+      // videoRef.current.srcObject = stream;
+    }
+    getUserMediaStream();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.constraints]);
+
   const initiateOffer = async (socketId) => {
     const pc = await initiatePeerConnection();
     const pcId = uuidv4();
@@ -489,13 +527,20 @@ export default function Meet(props) {
     setIsBusy(false);
   };
 
-  const mediaHandler = (type) => {
+  const mediaHandler = async (type) => {
     switch (type) {
       case "disconnect":
         socket.disconnect();
         history.push("/");
         break;
-
+      case "video":
+        const constraints = { ...state.constraints };
+        constraints.video = !constraints.video;
+        setState((oldState) => ({
+          ...oldState,
+          constraints,
+        }));
+        break;
       default:
         break;
     }
@@ -510,6 +555,24 @@ export default function Meet(props) {
         alignItems="center"
         spacing={0}
       >
+        {videoRefs.length === 0 ? (
+          <video
+            className={styles.selfVideo}
+            ref={selfVideoRef}
+            autoPlay
+            playsInline
+            muted
+          />
+        ) : (
+          <video
+            className={styles.selfVideo2}
+            ref={selfVideoRef}
+            autoPlay
+            playsInline
+            muted
+          />
+        )}
+
         {videoRefs.map((v, index) => (
           <Grid
             key={index}
