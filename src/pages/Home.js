@@ -90,7 +90,7 @@ export default function Home(props) {
   const [state, setState] = useRecoilState(siteState);
   const [user, setUser] = useRecoilState(userState);
   const style = useStyles();
-
+  console.log(props.location);
   const parameter = useQuery(props.location);
 
   const videoRef = useRef(null);
