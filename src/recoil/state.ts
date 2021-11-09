@@ -1,5 +1,17 @@
 import { atom } from "recoil";
 
+export interface ConstraintsProps{
+  audio: boolean,
+  video: boolean
+}
+
+interface stateProps{
+  constraints: ConstraintsProps,
+  stream: any,
+  link: any,
+  pc: Array<any>
+}
+
 export const state = atom({
   key: "state",
   default: {
@@ -10,7 +22,7 @@ export const state = atom({
     },
     link: null,
     pc: [],
-  },
+  } as stateProps,
 });
 
 export const user = atom({
