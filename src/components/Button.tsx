@@ -18,7 +18,14 @@ const useStyles = makeStyles({
   },
 });
 
-export const IconButton = ({ children, on, onClick, isSmall }) => {
+interface Props{
+  children: React.ReactNode,
+  on: boolean,
+  onClick: () => null,
+  isSmall: boolean
+}
+
+export const IconButton = ({ children, on, onClick, isSmall } : Props) => {
   const style = useStyles();
   return (
     <Button
