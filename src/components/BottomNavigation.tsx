@@ -13,7 +13,11 @@ const useStyles = makeStyles({
   },
 });
 
-export default function BottomNavigation({ clickHandler }) {
+interface Props {
+  clickHandler: (val: String) => null;
+}
+
+export default function BottomNavigation({ clickHandler }: Props) {
   const state = useRecoilValue(siteState);
   const classes = useStyles();
   return (
@@ -33,6 +37,7 @@ export default function BottomNavigation({ clickHandler }) {
         <IconButton
           onClick={() => clickHandler("video")}
           on={state.constraints.video}
+          isSmall={false}
         >
           {state.constraints.video ? (
             <VideoIcon
@@ -51,6 +56,7 @@ export default function BottomNavigation({ clickHandler }) {
         <IconButton
           onClick={() => clickHandler("audio")}
           on={state.constraints.audio}
+          isSmall={false}
         >
           {state.constraints.audio ? (
             <Audio
@@ -66,7 +72,11 @@ export default function BottomNavigation({ clickHandler }) {
             />
           )}
         </IconButton>
-        <IconButton onClick={() => clickHandler("disconnect")} on={false}>
+        <IconButton
+          onClick={() => clickHandler("disconnect")}
+          on={false}
+          isSmall={false}
+        >
           <Call width={25} height={25} color="white" />
         </IconButton>
       </div>
