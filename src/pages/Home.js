@@ -10,13 +10,11 @@ import { useEffect, useRef, useState } from "react";
 import { useRecoilState } from "recoil";
 import { getUserStream } from "../utils/Video";
 import { state as siteState, user as userState } from "../recoil/state";
-import { IconButton } from "../components/Button";
-import VideoIcon, { VideoOff } from "../icons/videoIcon";
-import { Audio, AudioOff } from "../icons/Audio";
 import { fetchApi } from "../utils/fetch";
 import useQuery from "../hooks/useQuery";
 import { useHistory } from "react-router";
 import { homeStyle } from "../theme/home";
+import { AudioButton, VideoButton } from "../components/VideoButton";
 
 export default function Home(props) {
   const [host, setHost] = useState(false);
@@ -199,42 +197,14 @@ export default function Home(props) {
                 muted
               ></video>
               <div className={style.videoFooter}>
-                <IconButton
-                  onClick={() => videoButtonClickHandler("video")}
+                <VideoButton
                   on={state.constraints.video}
-                >
-                  {state.constraints.video ? (
-                    <VideoIcon
-                      width={16}
-                      height={16}
-                      fill={state.constraints.video ? "black" : "white"}
-                    />
-                  ) : (
-                    <VideoOff
-                      width={16}
-                      height={16}
-                      fill={state.constraints.video ? "black" : "white"}
-                    />
-                  )}
-                </IconButton>
-                <IconButton
-                  onClick={() => videoButtonClickHandler("audio")}
+                  clickHandler={() => videoButtonClickHandler("video")}
+                />
+                <AudioButton
                   on={state.constraints.audio}
-                >
-                  {state.constraints.audio ? (
-                    <Audio
-                      width={16}
-                      height={16}
-                      fill={state.constraints.audio ? "black" : "white"}
-                    />
-                  ) : (
-                    <AudioOff
-                      width={16}
-                      height={16}
-                      fill={state.constraints.audio ? "black" : "white"}
-                    />
-                  )}
-                </IconButton>
+                  clickHandler={() => videoButtonClickHandler("audio")}
+                />
               </div>
             </Box>
           </Grid>
