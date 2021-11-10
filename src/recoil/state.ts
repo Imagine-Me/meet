@@ -1,15 +1,21 @@
 import { atom } from "recoil";
 
-export interface ConstraintsProps{
+export interface ConstraintsProps {
   audio: boolean,
   video: boolean
 }
 
-interface stateProps{
+interface StateProps {
   constraints: ConstraintsProps,
   stream: any,
   link: any,
   pc: Array<any>
+}
+
+interface UserProps {
+  isAuthenticated: boolean,
+  name: string,
+  socketId: null | string
 }
 
 export const state = atom({
@@ -22,17 +28,14 @@ export const state = atom({
     },
     link: null,
     pc: [],
-  } as stateProps,
+  } as StateProps,
 });
 
 export const user = atom({
   key: "user",
   default: {
-    firebase: null,
     isAuthenticated: false,
-    name: null,
-    email: null,
-    photo: null,
+    name: '',
     socketId: null,
-  },
+  } as UserProps,
 });
