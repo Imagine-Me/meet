@@ -13,8 +13,9 @@ const useStyles = makeStyles({
     minWidth: "20px"
   },
   big: {
-    width: "65px",
-    height: "65px",
+    width: "50px",
+    height: "50px",
+    minWidth: "20px"
   },
 });
 
