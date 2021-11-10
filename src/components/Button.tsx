@@ -22,7 +22,7 @@ const useStyles = makeStyles({
 interface Props{
   children: React.ReactNode,
   on: boolean,
-  onClick: () => null,
+  onClick: () => void,
   isSmall: boolean
 }
 

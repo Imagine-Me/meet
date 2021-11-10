@@ -5,14 +5,14 @@ export interface ConstraintsProps {
   video: boolean
 }
 
-interface StateProps {
+export interface StateProps {
   constraints: ConstraintsProps,
-  stream: any,
+  stream: MediaStream | null,
   link: any,
   pc: Array<any>
 }
 
-interface UserProps {
+export interface UserProps {
   isAuthenticated: boolean,
   name: string,
   socketId: null | string

@@ -7,9 +7,11 @@ export const getUserStream = async (constraints: ConstraintsProps) => {
       video: constraints.video,
       audio: true,
     };
-    const stream = await navigator.mediaDevices.getUserMedia(c);
+    const stream : MediaStream = await navigator.mediaDevices.getUserMedia(c);
     return stream;
-  } catch (e) { }
+  } catch (e) { 
+    return null;
+  }
 };
 
 export const initiatePeerConnection = () => {

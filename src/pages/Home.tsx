@@ -9,30 +9,41 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { useRecoilState } from "recoil";
 import { getUserStream } from "../utils/Video";
-import { state as siteState, user as userState } from "../recoil/state";
+import {
+  state as siteState,
+  user as userState,
+  UserProps,
+} from "../recoil/state";
 import { fetchApi } from "../utils/fetch";
 import useQuery from "../hooks/useQuery";
-import { useHistory } from "react-router";
+import { RouteProps, useHistory } from "react-router";
 import { homeStyle } from "../theme/home";
 import { AudioButton, VideoButton } from "../components/VideoButton";
 
-export default function Home(props) {
-  const [host, setHost] = useState(false);
-  const [link, setLink] = useState("");
+interface Props {
+  location: RouteProps["location"];
+}
+
+type ConstraintsTypes = "AUDIO" | "VIDEO";
+type UserTypes = "HOST" | "JOIN";
+
+export default function Home({ location }: Props) {
+  const [host, setHost] = useState<boolean>(false);
+  const [link, setLink] = useState<string>("");
   const [state, setState] = useRecoilState(siteState);
   const [user, setUser] = useRecoilState(userState);
   const style = homeStyle();
-  const parameter = useQuery(props.location);
-
-  const videoRef = useRef(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const parameter = useQuery(location);
 
   const history = useHistory();
 
   useEffect(() => {
-    if (localStorage.getItem("meet_p_user_name")) {
-      setUser((prev) => ({
+    const name = localStorage.getItem("meet_p_user_name");
+    if (name) {
+      setUser((prev: UserProps) => ({
         ...prev,
-        name: localStorage.getItem("meet_p_user_name"),
+        name: name,
         isAuthenticated: true,
       }));
     }
@@ -63,13 +74,13 @@ export default function Home(props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.constraints]);
 
-  const videoButtonClickHandler = (type) => {
+  const videoButtonClickHandler = (type: ConstraintsTypes) => {
     const constraints = { ...state.constraints };
     switch (type) {
-      case "audio":
+      case "AUDIO":
         constraints.audio = !constraints.audio;
         break;
-      case "video":
+      case "VIDEO":
         constraints.video = !constraints.video;
         break;
       default:
@@ -81,7 +92,7 @@ export default function Home(props) {
     }));
   };
 
-  const meetButtonHandler = (type) => {
+  const meetButtonHandler = (type: UserTypes) => {
     setUser((prev) => ({
       ...prev,
       isAuthenticated: true,
@@ -90,20 +101,18 @@ export default function Home(props) {
       localStorage.setItem("meet_p_user_name", user.name);
     }
     switch (type) {
-      case "host":
+      case "HOST":
         setHost(true);
         const dataHost = [
           {
             name: user.name,
-            email: "",
           },
         ];
         initiatePeer("host", dataHost);
         break;
-      case "join":
+      case "JOIN":
         const dataJoin = {
           name: user.name,
-          email: "",
           meetId: link,
         };
         initiatePeer("join", dataJoin);
@@ -114,7 +123,7 @@ export default function Home(props) {
     }
   };
 
-  const initiatePeer = async (type, data) => {
+  const initiatePeer = async (type: string, data: any) => {
     const response = await fetchApi(type, data);
     const json = await response.json();
     setState((oldState) => ({
@@ -152,8 +161,8 @@ export default function Home(props) {
                   size="large"
                   fullWidth
                   className={style.marginTop}
-                  onClick={() => meetButtonHandler("host")}
-                  disabled={!user.name || link.length}
+                  onClick={() => meetButtonHandler("HOST")}
+                  disabled={!user.name || link.length > 0}
                 >
                   {host ? (
                     <CircularProgress
@@ -180,7 +189,7 @@ export default function Home(props) {
                   fullWidth
                   className={style.marginTop}
                   disabled={!link || !user.name}
-                  onClick={() => meetButtonHandler("join")}
+                  onClick={() => meetButtonHandler("JOIN")}
                 >
                   Join Meeting
                 </Button>
@@ -199,11 +208,13 @@ export default function Home(props) {
               <div className={style.videoFooter}>
                 <VideoButton
                   on={state.constraints.video}
-                  clickHandler={() => videoButtonClickHandler("video")}
+                  clickHandler={() => {
+                    videoButtonClickHandler("VIDEO");
+                  }}
                 />
                 <AudioButton
                   on={state.constraints.audio}
-                  clickHandler={() => videoButtonClickHandler("audio")}
+                  clickHandler={() => videoButtonClickHandler("AUDIO")}
                 />
               </div>
             </Box>
