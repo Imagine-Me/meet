@@ -80,7 +80,7 @@ const setUpPeer = (pcId: string, stream: MediaStream, taskQueue: SynchronousTask
     };
     track.push(data);
     console.log('GOT A TRACK');
-    
+
     taskQueue.setState((prev) => ({
       ...prev,
       track
@@ -113,20 +113,16 @@ export const initiateOfferNew = async (socketId: string, stream: MediaStream, ta
         ...prev,
         ice
       }))
+      
     }
   };
 
+
   await createOffer(pc);
-  const peerConnections = [...taskQueue.state.pc];
   const peerConnection = {
     id: pcId,
     pc,
   } as PcType;
-  peerConnections.push(peerConnection);
-  taskQueue.setState((prev) => ({
-    ...prev,
-    pc: peerConnections
-  }))
 
   return peerConnection;
 };
@@ -163,23 +159,16 @@ export const initiateAnswersNew = async (data: AnswerProps, stream: MediaStream,
   return peerConnection;
 };
 
-export const addAnswerNew = async (data: AnswerProps, taskQueue: SynchronousTaskManager) => {
+export const addAnswerNew = (data: AnswerProps, taskQueue: SynchronousTaskManager) => {
   const pcId = data.id;
   const sdp = data.sdp;
-  const newPcs = taskQueue.state.pc.map(async (pc: PcType) => {
+  taskQueue.state.pc.forEach(async (pc: PcType) => {
     if (pc.id === pcId) {
       try {
         await addRemoteDescription(pc.pc, sdp);
       } catch {
         throw new Error("COULDNT ADD ANSWER");
-
       }
     }
-    return pc;
   });
-
-  taskQueue.setState((prev) => ({
-    ...prev,
-    pc: newPcs
-  }))
 };

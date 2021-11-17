@@ -91,26 +91,26 @@ export default function Meet(props) {
         const prevTrack = prev.track;
         const nextTrack = next.track;
 
+        const prevPc = prev.pc;
+        const nextPc = next.pc;
+
         if (prevTrack.length !== nextTrack.length) {
           setTracks(nextTrack);
         }
 
         if (prevIce.length !== nextIce.length) {
-          const newIce = next.ice.map((ice) => {
+          console.log("HMM", nextIce);
+          nextIce.forEach((ice) => {
             if (!ice.isCompleted) {
               ice.isCompleted = true;
-              socket.emit("send_ice_candidate", {
-                socketTo: ice.socketTo,
-                ...ice,
-              });
+              const pc = nextPc.find((pc) => pc.id === ice.pcId);
+              if (pc) {
+                socket.emit("send_offer", pc.offerData);
+              } else {
+                console.log("COULD'NT CREATE PC");
+              }
             }
-            return ice;
           });
-
-          taskQueue.current.setState((prev) => ({
-            ...prev,
-            ice: newIce,
-          }));
         }
       });
 
@@ -144,8 +144,14 @@ export default function Meet(props) {
           name: user.name,
           audio: state.constraints.audio,
         };
-        console.log("SENDING OFFER", offerData);
-        socket.emit("send_offer", offerData);
+
+        peerConnectionOffer.offerData = offerData;
+        const newPcOffer = [...taskQueue.current.state.pc];
+        newPcOffer.push(peerConnectionOffer);
+        taskQueue.current.setState((prev) => ({
+          ...prev,
+          pc: newPcOffer,
+        }));
         break;
       case SOCKET_CONSTANTS.INITIATE_ANSWER:
         console.log("GOT AN OFFER", value.value);
@@ -165,25 +171,37 @@ export default function Meet(props) {
         console.log("SENDING ANSWER", answerData);
         socket.emit("send_answer", answerData);
         break;
-      // case SOCKET_CONSTANTS.ADD_ANSWER:
-      //   console.log("GOT AN ANSWER", value.value);
-      //   await addAnswerNew(value.value, taskQueue.current);
-      //   console.log("ANSWER ADDED");
-      //   break;
-      // case SOCKET_CONSTANTS.GET_ICE_CANDIDATE:
-      //   console.log("GOT SOME ICE CANDIDATES", value.value);
-      //   const newPc = taskQueue.current.state.pc.map((pc) => {
-      //     if (pc.id === value.id) {
-      //       console.log("ADDING ICE CANDIDATE");
-      //       addIceCandidate(pc.pc, value.value);
-      //     }
-      //     return pc;
-      //   });
-      //   taskQueue.current.setState((prev) => ({
-      //     ...prev,
-      //     pc: newPc,
-      //   }));
-      //   break;
+      case SOCKET_CONSTANTS.ADD_ANSWER:
+        console.log("GOT AN ANSWER", value.value);
+        await addAnswerNew(value.value, taskQueue.current);
+        taskQueue.current.state.ice.forEach((ice) => {
+          if (ice.pcId === value.value.id) {
+            console.log("THIS CANDIDATE SHOULD SEND NOW...", ice);
+            const iceCandidates = {
+              socketId: ice.socketId,
+              candidates: ice.candidates,
+              pcId: ice.pcId,
+            };
+            console.log("SENDING ICE CANDIDATE", iceCandidates);
+            socket.emit("send_ice_candidate", iceCandidates);
+          }
+        });
+        console.log("ANSWER ADDED", value.value);
+        break;
+      case SOCKET_CONSTANTS.GET_ICE_CANDIDATE:
+        console.log("GOT SOME ICE CANDIDATES", value.value);
+        const newPc = taskQueue.current.state.pc.map((pc) => {
+          if (pc.id === value.id) {
+            console.log("ADDING ICE CANDIDATE");
+            addIceCandidate(pc.pc, value.value);
+          }
+          return pc;
+        });
+        taskQueue.current.setState((prev) => ({
+          ...prev,
+          pc: newPc,
+        }));
+        break;
       default:
         return;
     }
@@ -256,12 +274,18 @@ export default function Meet(props) {
   return (
     <div className={styles.mainContainer}>
       <video
-            style={{width: '300px',height: '300px',position: 'absolute',top: '0',left: '0'}}
-            ref={selfVideoRef1}
-            autoPlay
-            playsInline
-            muted
-          />
+        style={{
+          width: "300px",
+          height: "300px",
+          position: "absolute",
+          top: "0",
+          left: "0",
+        }}
+        ref={selfVideoRef1}
+        autoPlay
+        playsInline
+        muted
+      />
       {/* <Grid
         container
         direction="row"
