@@ -2,6 +2,7 @@ import { ConstraintsProps } from "../recoil/state";
 import { v4 as uuidv4 } from "uuid";
 import { SynchronousTaskManager } from "synchronous-task-manager";
 import { getPcById } from "./helper";
+import { RefObject } from "react";
 
 interface PcType {
   id: string;
@@ -58,8 +59,9 @@ export const addIceCandidate = (pc: RTCPeerConnection, candidates: RTCIceCandida
     pc.addIceCandidate(new RTCIceCandidate(candidate))
   );
 };
-export const addTracksToVideo = (ref: any, stream: any) => {
-  ref.current.srcObject = stream;
+export const addTracksToVideo = (ref: RefObject<HTMLVideoElement>, stream: MediaStream) => {
+  if (ref.current)
+    ref.current.srcObject = stream;
 };
 
 
@@ -113,7 +115,7 @@ export const initiateOfferNew = async (socketId: string, stream: MediaStream, ta
         ...prev,
         ice
       }))
-      
+
     }
   };
 

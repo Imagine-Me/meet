@@ -212,8 +212,8 @@ export default function Meet(props) {
     videoRefs.forEach((videoRef) => {
       let mediaTrack = tracks.filter((t) => t.id === videoRef.id);
       mediaTrack = mediaTrack?.[0]?.stream;
-      console.log("ADDING STREAM", mediaTrack);
-      if (mediaTrack && videoRef.ref.current) {
+      if (mediaTrack) {
+        console.log("ADDING STREAM", mediaTrack);
         addTracksToVideo(selfVideoRef1, mediaTrack);
       }
     });
