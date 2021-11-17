@@ -3,6 +3,7 @@ import { useHistory } from "react-router";
 import { useRecoilState } from "recoil";
 import { v4 as uuidv4 } from "uuid";
 import { state as userState, user as userDetails } from "../recoil/state";
+import addSockets from "../utils/socket";
 import {
   addIceCandidate,
   addRemoteDescription,
@@ -38,6 +39,7 @@ import {
 } from "../utils/helper";
 import { IconButton } from "../components/Button";
 import { AudioOff } from "../icons/Audio";
+import { synchronousTaskQueue } from "synchronous-task-manager";
 
 export default function Meet(props) {
   const [socket, setSocket] = useState(null);
@@ -48,6 +50,8 @@ export default function Meet(props) {
   const [ice, setIce] = useState([]);
   const [state, setState] = useRecoilState(userState);
   const [user, setUser] = useRecoilState(userDetails);
+
+  const taskQueue = useRef(synchronousTaskQueue);
 
   const isDesktopWidth = useMediaQuery((theme) => theme.breakpoints.up("md"));
 
@@ -109,80 +113,7 @@ export default function Meet(props) {
           socketId,
         }));
       });
-
-      socket.on("get_users", (data) => {
-        const initialUsers = data.map((value) => ({
-          isCompleted: false,
-          socketTo: value,
-          requests: [{ type: REQUEST_OFFER, isCompleted: false }],
-          id: undefined,
-        }));
-        setSocketListener(initialUsers);
-      });
-
-      socket.on("get_offer_request", (data) => {
-        const result = {
-          socketTo: data,
-          id: null,
-          requests: [{ type: INITIATE_OFFER, isCompleted: false }],
-          isCompleted: false,
-        };
-        setSocketListener(result);
-      });
-
-      socket.on("get_offer", (data) => {
-        const result = {
-          id: data.id,
-          socketTo: data.socketFrom,
-          requests: [
-            { type: INITIATE_ANSWER, isCompleted: false, value: data },
-          ],
-        };
-        setSocketListener(result);
-      });
-
-      socket.on("get_answer", function (data) {
-        const result = {
-          id: data.id,
-          socketTo: data.socketFrom,
-          requests: [{ type: ADD_ANSWER, value: data, isCompleted: false }],
-        };
-        setSocketListener(result);
-      });
-
-      socket.on("get_ice_candidates", (data) => {
-        const result = {
-          isCompleted: false,
-          id: data.pcId,
-          requests: [
-            {
-              type: GET_ICE_CANDIDATE,
-              value: data.candidates,
-              isCompleted: false,
-            },
-          ],
-        };
-        setSocketListener(result);
-      });
-
-      socket.on(AUDIO_TOGGLE, function (data) {
-        if (data.socket !== this.id) {
-          const result = {
-            isCompleted: false,
-            requests: [{ type: AUDIO_TOGGLE, value: data, isCompleted: false }],
-          };
-
-          setSocketListener(result);
-        }
-      });
-
-      socket.on("disconnected", function (data) {
-        const result = {
-          isCompleted: false,
-          requests: [{ type: DISCONNECTED, value: data, isCompleted: false }],
-        };
-        setSocketListener(result);
-      });
+      addSockets(socket, setSocketListener);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket]);

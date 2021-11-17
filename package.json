@@ -23,6 +23,7 @@
     "react-scripts": "4.0.3",
     "recoil": "^0.2.0",
     "socket.io-client": "^4.3.2",
+    "synchronous-task-manager": "^1.0.6",
     "typescript": "^4.4.4",
     "uuid": "^8.3.2",
     "web-vitals": "^1.1.2"
