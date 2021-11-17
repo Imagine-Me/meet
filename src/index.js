@@ -1,4 +1,4 @@
-import { createTheme, ThemeProvider } from "@material-ui/core";
+import { createMuiTheme, ThemeProvider } from "@material-ui/core";
 import React from "react";
 import ReactDOM from "react-dom";
 import { BrowserRouter } from "react-router-dom";
@@ -6,7 +6,7 @@ import { RecoilRoot } from "recoil";
 
 import App from "./App";
 
-const MuiTheme = createTheme({
+const MuiTheme = createMuiTheme({
   palette: {
     primary: {
       main: "#5775C1",

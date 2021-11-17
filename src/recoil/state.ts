@@ -7,7 +7,7 @@ export interface ConstraintsProps {
 
 interface StateProps {
   constraints: ConstraintsProps,
-  stream: any,
+  stream: MediaStream | null,
   link: any,
   pc: Array<any>
 }

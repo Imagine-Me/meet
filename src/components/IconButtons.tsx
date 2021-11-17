@@ -5,12 +5,12 @@ import { AiOutlineAudio, AiOutlineAudioMuted } from "react-icons/ai";
 
 interface Props {
   on: boolean;
-  clickHandler: (val: string) => null;
+  clickHandler: () => null;
 }
 
 export const VideoButton = ({ on, clickHandler }: Props) => {
   return (
-    <IconButton isSmall={false} onClick={() => clickHandler("video")} on={on}>
+    <IconButton isSmall={false} onClick={clickHandler} on={on}>
       {on ? (
         <BsCameraVideo size={16} color="black" />
       ) : (
@@ -22,7 +22,7 @@ export const VideoButton = ({ on, clickHandler }: Props) => {
 
 export const AudioButton = ({ on, clickHandler }: Props) => {
   return (
-    <IconButton isSmall={false} onClick={() => clickHandler("audio")} on={on}>
+    <IconButton isSmall={false} onClick={clickHandler} on={on}>
       {on ? (
         <AiOutlineAudio size={16} color="black" />
       ) : (

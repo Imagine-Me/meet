@@ -13,18 +13,22 @@ import { state as siteState, user as userState } from "../recoil/state";
 import { AudioButton, VideoButton } from "../components/IconButtons";
 import { fetchApi } from "../utils/fetch";
 import useQuery from "../hooks/useQuery";
-import { useHistory } from "react-router";
+import { RouteProps, useHistory } from "react-router";
 import { homeStyle } from "../theme/home";
 
-export default function Home(props) {
+interface Props {
+  location: RouteProps["location"];
+}
+
+export default function Home({ location }: Props) {
   const [host, setHost] = useState(false);
   const [link, setLink] = useState("");
   const [state, setState] = useRecoilState(siteState);
   const [user, setUser] = useRecoilState(userState);
   const style = homeStyle();
-  const parameter = useQuery(props.location);
+  const parameter = useQuery(location);
 
-  const videoRef = useRef(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const history = useHistory();
 
@@ -32,7 +36,7 @@ export default function Home(props) {
     if (localStorage.getItem("meet_p_user_name")) {
       setUser((prev) => ({
         ...prev,
-        name: localStorage.getItem("meet_p_user_name"),
+        name: localStorage.getItem("meet_p_user_name") ?? "",
         isAuthenticated: true,
       }));
     }
@@ -51,19 +55,21 @@ export default function Home(props) {
         });
       }
       const stream = await getUserStream(state.constraints);
-      setState((oldState) => ({
-        ...oldState,
-        stream,
-      }));
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+      if (stream) {
+        setState((oldState) => ({
+          ...oldState,
+          stream,
+        }));
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
       }
     }
     getUserMediaStream();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.constraints]);
 
-  const videoButtonClickHandler = (type) => {
+  const videoButtonClickHandler = (type: string) => {
     const constraints = { ...state.constraints };
     switch (type) {
       case "audio":
@@ -72,16 +78,15 @@ export default function Home(props) {
       case "video":
         constraints.video = !constraints.video;
         break;
-      default:
-        return;
     }
     setState((oldState) => ({
       ...oldState,
       constraints,
     }));
+    return null;
   };
 
-  const meetButtonHandler = (type) => {
+  const meetButtonHandler = (type: string) => {
     setUser((prev) => ({
       ...prev,
       isAuthenticated: true,
@@ -112,15 +117,19 @@ export default function Home(props) {
     }
   };
 
-  const initiatePeer = async (type, data) => {
-    const response = await fetchApi(type, data);
-    const json = await response.json();
-    setState((oldState) => ({
-      ...oldState,
-      link: json.meetId,
-    }));
-    setHost(false);
-    history.push(`/${json.meetId}`);
+  const initiatePeer = async (type: string, data: any) => {
+    try {
+      const response = await fetchApi(type, data);
+      const json = await response.json();
+      setState((oldState) => ({
+        ...oldState,
+        link: json.meetId,
+      }));
+      setHost(false);
+      history.push(`/${json.meetId}`);
+    } catch (err) {
+      console.error("THERE IS AN ERROR WHILE CONNECTING SERVER", err);
+    }
   };
 
   return (
@@ -151,15 +160,15 @@ export default function Home(props) {
                   fullWidth
                   className={style.marginTop}
                   onClick={() => meetButtonHandler("host")}
-                  disabled={!user.name || link.length}
+                  disabled={!user.name || link.length > 0}
                 >
-                  {host ? (
+                  {host && (
                     <CircularProgress
                       color="inherit"
                       size={18}
                       style={{ marginRight: "8px" }}
                     />
-                  ) : null}
+                  )}
                   Start Instant Meeting
                 </Button>
                 <TextField
@@ -195,8 +204,14 @@ export default function Home(props) {
                 muted
               ></video>
               <div className={style.videoFooter}>
-                <VideoButton on={state.constraints.video} clickHandler={videoButtonClickHandler} />
-                <AudioButton on={state.constraints.audio} clickHandler={videoButtonClickHandler} />
+                <VideoButton
+                  on={state.constraints.video}
+                  clickHandler={() => videoButtonClickHandler("video")}
+                />
+                <AudioButton
+                  on={state.constraints.audio}
+                  clickHandler={() => videoButtonClickHandler("audio")}
+                />
               </div>
             </Box>
           </Grid>
