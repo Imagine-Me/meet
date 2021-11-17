@@ -21,8 +21,8 @@ interface Props {
 }
 
 export default function Home({ location }: Props) {
-  const [host, setHost] = useState(false);
-  const [link, setLink] = useState("");
+  const [host, setHost] = useState<boolean>(false);
+  const [link, setLink] = useState<string>("");
   const [state, setState] = useRecoilState(siteState);
   const [user, setUser] = useRecoilState(userState);
   const style = homeStyle();
