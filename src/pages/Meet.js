@@ -6,10 +6,6 @@ import { state as userState, user as userDetails } from "../recoil/state";
 import addSockets from "../utils/socket";
 import {
   addIceCandidate,
-  addRemoteDescription,
-  answerOffer,
-  createOffer,
-  initiatePeerConnection,
   addTracksToVideo,
   getUserStream,
   initiateOfferNew,
@@ -19,31 +15,14 @@ import {
 import { io } from "socket.io-client";
 import * as SOCKET_CONSTANTS from "../constants/socketConstant";
 import { meetStyles } from "../theme/meet";
-import { Avatar, Grid, Typography, useMediaQuery } from "@material-ui/core";
+import {  Grid, Typography, useMediaQuery } from "@material-ui/core";
 import BottomNavigation from "../components/BottomNavigation";
 import { desktopGridSize, mobileGridSize } from "../utils/gridSize";
-import {
-  addUserDetailToPC,
-  completePcRequestArray,
-  getPcById,
-  removeConnection,
-  setPcRequestQueueCompletedArray,
-  toggleAudio,
-  updatePcBeforeSendingOffer,
-  updatePcRequestArray,
-} from "../utils/helper";
-import { IconButton } from "../components/Button";
-import { AudioOff } from "../icons/Audio";
 import { synchronousTaskQueue } from "synchronous-task-manager";
 
 export default function Meet(props) {
   const [socket, setSocket] = useState(null);
-  const [isBusy, setIsBusy] = useState(false);
-  const [track, setTrack] = useState([]);
   const [tracks, setTracks] = useState([]);
-  const [pcRequestQueue, setPcRequestQueue] = useState([]);
-  const [socketListener, setSocketListener] = useState(null);
-  const [ice, setIce] = useState([]);
   const [state, setState] = useRecoilState(userState);
   const [user, setUser] = useRecoilState(userDetails);
 
@@ -135,7 +114,7 @@ export default function Meet(props) {
       });
 
       taskQueue.current.listen(processTask);
-      addSockets(state.link, socket, taskQueue.current, setSocketListener);
+      addSockets(state.link, socket, taskQueue.current);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket]);
@@ -194,6 +173,7 @@ export default function Meet(props) {
         console.log("GOT SOME ICE CANDIDATES", value.value);
         const newPc = taskQueue.current.state.pc.map((pc) => {
           if (pc.id === value.id) {
+            console.log('ADDING ICE CANDIDATE');
             addIceCandidate(pc.pc, value.value);
           }
           return pc;
@@ -209,142 +189,6 @@ export default function Meet(props) {
     taskQueue.current.complete();
   };
 
-  useEffect(() => {
-    if (socketListener !== null) {
-      if (Array.isArray(socketListener)) {
-        setPcRequestQueue(socketListener);
-      } else {
-        if (socketListener.id) {
-          const pcRequestQueueCopy = pcRequestQueue.map((pr) => {
-            if (
-              pr.id === socketListener.id ||
-              pr.socketTo === socketListener.socketTo
-            ) {
-              const prCopy = { ...pr };
-              prCopy.id = socketListener.id;
-              const requestCopy = [...prCopy.requests];
-              const updatedRequest = requestCopy.concat(
-                socketListener.requests
-              );
-              prCopy.requests = updatedRequest;
-              return prCopy;
-            }
-            return pr;
-          });
-          setPcRequestQueue(pcRequestQueueCopy);
-        } else {
-          const pcRequestQueueCopy = [...pcRequestQueue];
-          pcRequestQueueCopy.push(socketListener);
-          setPcRequestQueue(pcRequestQueueCopy);
-        }
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [socketListener]);
-
-  useEffect(() => {
-    let flag = false;
-    pcRequestQueue.every((pcRequest, index) => {
-      if (isBusy) {
-        return false;
-      }
-      if (!pcRequest.isCompleted) {
-        flag = true;
-        pcRequest.requests.every((request) => {
-          const result = {
-            socketFrom: socket.id,
-            socketTo: pcRequest.socketTo,
-          };
-          if (!request.isCompleted) {
-            switch (request.type) {
-              case SOCKET_CONSTANTS.REQUEST_OFFER:
-                socket.emit("get_offer", result);
-                setPcRequestQueue(
-                  updatePcRequestArray(pcRequestQueue, index, request.type)
-                );
-                return false;
-              case SOCKET_CONSTANTS.INITIATE_OFFER:
-                setIsBusy(true);
-                initiateOffer(pcRequest.socketTo);
-                setPcRequestQueue(
-                  updatePcRequestArray(pcRequestQueue, index, request.type)
-                );
-                return false;
-              case SOCKET_CONSTANTS.INITIATE_ANSWER:
-                setIsBusy(true);
-                initiateAnswers(request.value);
-                setPcRequestQueue(
-                  updatePcRequestArray(pcRequestQueue, index, request.type)
-                );
-                return false;
-              case SOCKET_CONSTANTS.ADD_ANSWER:
-                setIsBusy(true);
-                addAnswer({ ...request.value, ...result });
-                setPcRequestQueue(
-                  updatePcRequestArray(pcRequestQueue, index, request.type)
-                );
-                return false;
-              case SOCKET_CONSTANTS.GET_ICE_CANDIDATE:
-                setIsBusy(true);
-                setIceCandidates({
-                  pcId: pcRequest.id,
-                  candidates: request.value,
-                });
-                return false;
-              case SOCKET_CONSTANTS.DISCONNECTED:
-                setIsBusy(true);
-                const updatedPc = removeConnection(state.pc, request.value);
-                setState((oldState) => ({
-                  ...oldState,
-                  pc: updatedPc,
-                }));
-                setPcRequestQueue(
-                  completePcRequestArray(pcRequestQueue, index)
-                );
-                setIsBusy(false);
-                return false;
-              case SOCKET_CONSTANTS.AUDIO_TOGGLE:
-                setIsBusy(true);
-                const updatedPcs = toggleAudio(state.pc, request.value);
-                setState((oldState) => ({
-                  ...oldState,
-                  pc: updatedPcs,
-                }));
-                setPcRequestQueue(
-                  completePcRequestArray(pcRequestQueue, index)
-                );
-                setIsBusy(false);
-                return false;
-              default:
-                return false;
-            }
-          } else {
-            return true;
-          }
-        });
-      }
-      return !flag;
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pcRequestQueue]);
-
-  useEffect(() => {
-    ice.forEach((iceCandidate, index) => {
-      if (!iceCandidate.isCompleted) {
-        socket.emit("send_ice_candidate", iceCandidate);
-        const iceCopy = ice.map((iceC, i) => {
-          if (index === i) {
-            const candidateCopy = { ...iceC };
-            candidateCopy.isCompleted = true;
-            return candidateCopy;
-          }
-          return iceC;
-        });
-        setIce(iceCopy);
-      }
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ice]);
 
   useEffect(() => {
     videoRefs.forEach((videoRef) => {
@@ -357,29 +201,6 @@ export default function Meet(props) {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoRefs, tracks]);
-
-  useEffect(() => {
-    state.pc.forEach((pc) => {
-      if (!pc.isCompleted) {
-        const data = {
-          socket: pc.socket,
-          sdp: pc.sdp,
-          id: pc.id,
-        };
-        switch (pc.method) {
-          case "offer":
-            sendOffer(data);
-            return;
-          case "answer":
-            sendAnswer(data);
-            return;
-          default:
-            return;
-        }
-      }
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.pc]);
 
   useEffect(() => {
     async function getUserMediaStream() {
@@ -401,170 +222,6 @@ export default function Meet(props) {
     getUserMediaStream();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.constraints]);
-
-  const initiateOffer = async (socketId) => {
-    const pc = await initiatePeerConnection();
-    const pcId = uuidv4();
-
-    if (state.stream !== undefined) {
-      state.stream
-        .getTracks()
-        .forEach((track) => pc.addTrack(track, state.stream));
-    }
-
-    const candidates = [];
-    pc.onicecandidate = (e) => {
-      if (e.candidate) {
-        candidates.push(e.candidate);
-      } else {
-        const result = {
-          pcId,
-          candidates,
-          isCompleted: false,
-          socketId,
-        };
-        const iceCopy = [...ice];
-        iceCopy.push(result);
-        setIce(iceCopy);
-      }
-    };
-    pc.ontrack = (e) => {
-      const updatedTrack = [...track];
-      const data = {
-        id: pcId,
-        stream: e.streams[0],
-      };
-      updatedTrack.push(data);
-      setTrack(updatedTrack);
-    };
-    pc.onnegotiationneeded = await createOffer(pc);
-    const peerConnections = [...state.pc];
-    const peerConnection = {
-      id: pcId,
-      socket: socketId,
-      sdp: pc.localDescription,
-      pc,
-      method: "offer",
-      isCompleted: false,
-    };
-    peerConnections.push(peerConnection);
-    setState((oldState) => ({
-      ...oldState,
-      pc: peerConnections,
-    }));
-  };
-
-  const sendOffer = (peerConnection) => {
-    const { data, newPc } = updatePcBeforeSendingOffer(
-      peerConnection,
-      state.pc,
-      socket.id,
-      user,
-      state.constraints
-    );
-    setState((oldState) => ({
-      ...oldState,
-      pc: newPc,
-    }));
-
-    socket.emit("send_offer", data);
-    setIsBusy(false);
-  };
-
-  const initiateAnswers = async (data) => {
-    const pc = await initiatePeerConnection();
-    if (state.stream !== undefined) {
-      state.stream
-        .getTracks()
-        .forEach((track) => pc.addTrack(track, state.stream));
-    }
-
-    pc.ontrack = (e) => {
-      const updatedTrack = [...track];
-      const datas = {
-        id: data.id,
-        stream: e.streams[0],
-      };
-      updatedTrack.push(datas);
-      setTrack(updatedTrack);
-    };
-    try {
-      await addRemoteDescription(pc, data.sdp);
-    } catch {
-      console.log("An error occurred");
-    }
-    await answerOffer(pc);
-
-    const peerConnections = [...state.pc];
-    const peerConnection = {
-      socket: data.socketFrom,
-      id: data.id,
-      name: data.name,
-      photo: data.photo,
-      audio: data.audio,
-      sdp: pc.localDescription,
-      pc,
-      method: "answer",
-      isCompleted: false,
-    };
-    peerConnections.push(peerConnection);
-    setState((oldState) => ({
-      ...oldState,
-      pc: peerConnections,
-    }));
-  };
-
-  const sendAnswer = (peerConnection) => {
-    const { data, newPc } = updatePcBeforeSendingOffer(
-      peerConnection,
-      state.pc,
-      socket.id,
-      user,
-      state.constraints
-    );
-    setState((oldState) => ({
-      ...oldState,
-      pc: newPc,
-    }));
-    socket.emit("send_answer", data);
-    setIsBusy(false);
-  };
-
-  const addAnswer = async (data) => {
-    const pcId = data.id;
-    const sdp = data.sdp;
-    const pc = getPcById(state.pc, pcId);
-    try {
-      await addRemoteDescription(pc, sdp);
-    } catch {
-      console.log("Error occurred");
-    }
-    setPcRequestQueue(setPcRequestQueueCompletedArray(pcRequestQueue, pcId));
-    const iceCandidate = ice.filter((candidate) => candidate.pcId === pcId);
-    socket.emit("send_ice_candidate", {
-      socketTo: data.socketTo,
-      ...iceCandidate[0],
-    });
-    const newPcs = addUserDetailToPC(
-      state.pc,
-      pcId,
-      data.name,
-      data.photo,
-      data.audio
-    );
-    setState((oldState) => ({
-      ...oldState,
-      pc: newPcs,
-    }));
-    setIsBusy(false);
-  };
-
-  const setIceCandidates = ({ pcId, candidates }) => {
-    const pc = getPcById(state.pc, pcId);
-    addIceCandidate(pc, candidates);
-    setPcRequestQueue(setPcRequestQueueCompletedArray(pcRequestQueue, pcId));
-    setIsBusy(false);
-  };
 
   const mediaHandler = async (type) => {
     switch (type) {

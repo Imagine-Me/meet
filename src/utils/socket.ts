@@ -8,7 +8,7 @@ interface DataType {
     id: string | null
 }
 
-export default function addSockets(link: string, socket: Socket, taskQueue: SynchronousTaskManager, setSocketListener: Function) {
+export default function addSockets(link: string, socket: Socket, taskQueue: SynchronousTaskManager) {
 
 
     socket.on("connect", () => {
@@ -73,7 +73,7 @@ export default function addSockets(link: string, socket: Socket, taskQueue: Sync
                 isCompleted: false,
                 requests: [{ type: SOCKET_CONSTANTS.AUDIO_TOGGLE, value: data, isCompleted: false }],
             };
-            setSocketListener(result);
+            // setSocketListener(result);
         }
     });
 
@@ -82,6 +82,6 @@ export default function addSockets(link: string, socket: Socket, taskQueue: Sync
             isCompleted: false,
             requests: [{ type: SOCKET_CONSTANTS.DISCONNECTED, value: data, isCompleted: false }],
         };
-        setSocketListener(result);
+        // setSocketListener(result);
     });
 }

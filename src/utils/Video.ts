@@ -43,16 +43,17 @@ export const addRemoteDescription = (pc: RTCPeerConnection, sdp: any) => {
   return pc.setRemoteDescription(new RTCSessionDescription(sdp));
 };
 
-export const answerOffer = (pc: any) => {
-  return pc
-    .createAnswer({
-      offerToReceiveVideo: true,
-      offerToReceiveAudio: true,
-    })
-    .then((sdp: any) => pc.setLocalDescription(sdp));
+export const answerOffer = async (pc: RTCPeerConnection) => {
+  const sdp = await pc.createAnswer({
+    offerToReceiveVideo: true,
+    offerToReceiveAudio: true,
+  })
+  await pc.setLocalDescription(sdp);
+  return pc;
 };
 
-export const addIceCandidate = (pc: any, candidates: any) => {
+export const addIceCandidate = (pc: RTCPeerConnection, candidates: RTCIceCandidate[]) => {
+  console.log('ADDING TO ', pc, 'CANDIDATES', candidates);
   candidates.forEach((candidate: any) =>
     pc.addIceCandidate(new RTCIceCandidate(candidate))
   );
@@ -141,11 +142,11 @@ export const initiateAnswersNew = async (data: AnswerProps, stream: MediaStream,
   const pc = setUpPeer(data.id, stream, taskQueue);
 
   try {
+    await answerOffer(pc);
     await addRemoteDescription(pc, data.sdp);
-  } catch {
-    console.log("An error occurred");
+  } catch (err) {
+    console.error("An error occurred", err);
   }
-  await answerOffer(pc);
 
   const peerConnections = [...taskQueue.state.pc];
   const peerConnection = {
