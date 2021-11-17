@@ -142,8 +142,8 @@ export const initiateAnswersNew = async (data: AnswerProps, stream: MediaStream,
   const pc = setUpPeer(data.id, stream, taskQueue);
 
   try {
-    await answerOffer(pc);
     await addRemoteDescription(pc, data.sdp);
+    await answerOffer(pc);
   } catch (err) {
     console.error("An error occurred", err);
   }

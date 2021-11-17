@@ -15,7 +15,7 @@ import {
 import { io } from "socket.io-client";
 import * as SOCKET_CONSTANTS from "../constants/socketConstant";
 import { meetStyles } from "../theme/meet";
-import {  Grid, Typography, useMediaQuery } from "@material-ui/core";
+import { Grid, Typography, useMediaQuery } from "@material-ui/core";
 import BottomNavigation from "../components/BottomNavigation";
 import { desktopGridSize, mobileGridSize } from "../utils/gridSize";
 import { synchronousTaskQueue } from "synchronous-task-manager";
@@ -40,6 +40,7 @@ export default function Meet(props) {
   }, [tracks]);
 
   const selfVideoRef = useRef();
+  const selfVideoRef1 = useRef();
 
   const { mobileGrid, desktopGrid } = useMemo(() => {
     return {
@@ -173,7 +174,7 @@ export default function Meet(props) {
         console.log("GOT SOME ICE CANDIDATES", value.value);
         const newPc = taskQueue.current.state.pc.map((pc) => {
           if (pc.id === value.id) {
-            console.log('ADDING ICE CANDIDATE');
+            console.log("ADDING ICE CANDIDATE");
             addIceCandidate(pc.pc, value.value);
           }
           return pc;
@@ -189,14 +190,13 @@ export default function Meet(props) {
     taskQueue.current.complete();
   };
 
-
   useEffect(() => {
     videoRefs.forEach((videoRef) => {
       let mediaTrack = tracks.filter((t) => t.id === videoRef.id);
       mediaTrack = mediaTrack?.[0]?.stream;
       console.log("ADDING STREAM", mediaTrack);
       if (mediaTrack && videoRef.ref.current) {
-        addTracksToVideo(videoRef.ref, mediaTrack);
+        addTracksToVideo(selfVideoRef1, mediaTrack);
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -255,6 +255,13 @@ export default function Meet(props) {
 
   return (
     <div className={styles.mainContainer}>
+      <video
+            style={{width: '300px',height: '300px',position: 'absolute',top: '0',left: '0'}}
+            ref={selfVideoRef1}
+            autoPlay
+            playsInline
+            muted
+          />
       <Grid
         container
         direction="row"
@@ -262,56 +269,7 @@ export default function Meet(props) {
         alignItems="center"
         spacing={0}
       >
-        {videoRefs.length === 0 ? (
-          <video
-            className={styles.selfVideo}
-            ref={selfVideoRef}
-            autoPlay
-            playsInline
-            muted
-          />
-        ) : (
-          <video
-            className={styles.selfVideo2}
-            ref={selfVideoRef}
-            autoPlay
-            playsInline
-            muted
-          />
-        )}
 
-        {tracks.map((v, index) => (
-          <Grid
-            key={index}
-            className={styles.Grid}
-            item
-            xs={mobileGrid.sizes[index]}
-            lg={desktopGrid.sizes[index]}
-            style={{
-              height: isDesktopWidth ? desktopGrid.height : mobileGrid.height,
-            }}
-          >
-            <div className={styles.UserDesc}>
-              <Typography variant="h6" color="secondary">
-                {/* {v.name} */}
-              </Typography>
-            </div>
-            <div>
-              {/* {v.audio ? null : (
-                <IconButton isSmall>
-                  <AudioOff width={14} height={14} fill="white" />
-                </IconButton>
-              )} */}
-            </div>
-            <video
-              ref={v.ref}
-              className={styles.video}
-              autoPlay
-              playsInline
-              muted={true}
-            />
-          </Grid>
-        ))}
       </Grid>
       <BottomNavigation clickHandler={mediaHandler} />
     </div>
