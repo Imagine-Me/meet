@@ -95,7 +95,6 @@ export default function Home(props) {
         const dataHost = [
           {
             name: user.name,
-            email: "",
           },
         ];
         initiatePeer("host", dataHost);
@@ -103,7 +102,6 @@ export default function Home(props) {
       case "join":
         const dataJoin = {
           name: user.name,
-          email: "",
           meetId: link,
         };
         initiatePeer("join", dataJoin);
