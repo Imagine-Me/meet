@@ -262,7 +262,7 @@ export default function Meet(props) {
             playsInline
             muted
           />
-      <Grid
+      {/* <Grid
         container
         direction="row"
         justify="center"
@@ -271,7 +271,7 @@ export default function Meet(props) {
       >
 
       </Grid>
-      <BottomNavigation clickHandler={mediaHandler} />
+      <BottomNavigation clickHandler={mediaHandler} /> */}
     </div>
   );
 }
