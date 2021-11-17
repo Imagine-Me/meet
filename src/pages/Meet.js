@@ -22,7 +22,7 @@ import {
   REQUEST_OFFER,
   AUDIO_TOGGLE,
 } from "../utils/constants";
-import { makeStyles } from "@material-ui/styles";
+import { meetStyles } from "../theme/meet";
 import { Avatar, Grid, Typography, useMediaQuery } from "@material-ui/core";
 import BottomNavigation from "../components/BottomNavigation";
 import { desktopGridSize, mobileGridSize } from "../utils/gridSize";
@@ -39,53 +39,6 @@ import {
 import { IconButton } from "../components/Button";
 import { AudioOff } from "../icons/Audio";
 
-const useStyles = makeStyles({
-  mainContainer: {
-    backgroundColor: "#363636",
-    width: "100%",
-    height: "calc(100% - 100px)",
-    position: "relative",
-  },
-  videoContainer: {
-    height: "100%",
-    width: "100%",
-  },
-  video: {
-    objectFit: "cover",
-    width: "100%",
-    height: "100%",
-  },
-  selfVideo: {
-    objectFit: "cover",
-    width: "100%",
-    height: `calc(${window.innerHeight}px - 100px)`,
-  },
-  selfVideo2: {
-    objectFit: "cover",
-    width: "200px",
-    height: "120px",
-    position: "absolute",
-    right: "0",
-    top: "0",
-    borderRadius: "5px",
-  },
-  UserDesc: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: -1,
-    flexDirection: "column",
-  },
-  Grid: {
-    position: "relative",
-  },
-});
-
 export default function Meet(props) {
   const [socket, setSocket] = useState(null);
   const [isBusy, setIsBusy] = useState(false);
@@ -99,7 +52,7 @@ export default function Meet(props) {
   const isDesktopWidth = useMediaQuery((theme) => theme.breakpoints.up("md"));
 
   const history = useHistory();
-  const styles = useStyles();
+  const styles = meetStyles();
   const videoRefs = useMemo(() => {
     return state.pc.map((p) => ({
       id: p.id,
