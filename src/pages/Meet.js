@@ -171,37 +171,37 @@ export default function Meet(props) {
         console.log("SENDING ANSWER", answerData);
         socket.emit("send_answer", answerData);
         break;
-      case SOCKET_CONSTANTS.ADD_ANSWER:
-        console.log("GOT AN ANSWER", value.value);
-        await addAnswerNew(value.value, taskQueue.current);
-        taskQueue.current.state.ice.forEach((ice) => {
-          if (ice.pcId === value.value.id) {
-            console.log("THIS CANDIDATE SHOULD SEND NOW...", ice);
-            const iceCandidates = {
-              socketId: ice.socketId,
-              candidates: ice.candidates,
-              pcId: ice.pcId,
-            };
-            console.log("SENDING ICE CANDIDATE", iceCandidates);
-            socket.emit("send_ice_candidate", iceCandidates);
-          }
-        });
-        console.log("ANSWER ADDED", value.value);
-        break;
-      case SOCKET_CONSTANTS.GET_ICE_CANDIDATE:
-        console.log("GOT SOME ICE CANDIDATES", value.value);
-        const newPc = taskQueue.current.state.pc.map((pc) => {
-          if (pc.id === value.id) {
-            console.log("ADDING ICE CANDIDATE");
-            addIceCandidate(pc.pc, value.value);
-          }
-          return pc;
-        });
-        taskQueue.current.setState((prev) => ({
-          ...prev,
-          pc: newPc,
-        }));
-        break;
+      // case SOCKET_CONSTANTS.ADD_ANSWER:
+      //   console.log("GOT AN ANSWER", value.value);
+      //   taskQueue.current.state.ice.forEach((ice) => {
+      //     if (ice.pcId === value.value.id) {
+      //       console.log("THIS CANDIDATE SHOULD SEND NOW...", ice);
+      //       const iceCandidates = {
+      //         socketId: ice.socketId,
+      //         candidates: ice.candidates,
+      //         pcId: ice.pcId,
+      //       };
+      //       console.log("SENDING ICE CANDIDATE", iceCandidates);
+      //       socket.emit("send_ice_candidate", iceCandidates);
+      //     }
+      //   });
+      //   await addAnswerNew(value.value, taskQueue.current);
+      //   console.log("ANSWER ADDED", value.value);
+      //   break;
+      // case SOCKET_CONSTANTS.GET_ICE_CANDIDATE:
+      //   console.log("GOT SOME ICE CANDIDATES", value.value);
+      //   const newPc = taskQueue.current.state.pc.map((pc) => {
+      //     if (pc.id === value.id) {
+      //       console.log("ADDING ICE CANDIDATE");
+      //       addIceCandidate(pc.pc, value.value);
+      //     }
+      //     return pc;
+      //   });
+      //   taskQueue.current.setState((prev) => ({
+      //     ...prev,
+      //     pc: newPc,
+      //   }));
+      //   break;
       default:
         return;
     }
