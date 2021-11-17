@@ -165,25 +165,25 @@ export default function Meet(props) {
         console.log("SENDING ANSWER", answerData);
         socket.emit("send_answer", answerData);
         break;
-      case SOCKET_CONSTANTS.ADD_ANSWER:
-        console.log("GOT AN ANSWER", value.value);
-        await addAnswerNew(value.value, taskQueue.current);
-        console.log("ANSWER ADDED");
-        break;
-      case SOCKET_CONSTANTS.GET_ICE_CANDIDATE:
-        console.log("GOT SOME ICE CANDIDATES", value.value);
-        const newPc = taskQueue.current.state.pc.map((pc) => {
-          if (pc.id === value.id) {
-            console.log("ADDING ICE CANDIDATE");
-            addIceCandidate(pc.pc, value.value);
-          }
-          return pc;
-        });
-        taskQueue.current.setState((prev) => ({
-          ...prev,
-          pc: newPc,
-        }));
-        break;
+      // case SOCKET_CONSTANTS.ADD_ANSWER:
+      //   console.log("GOT AN ANSWER", value.value);
+      //   await addAnswerNew(value.value, taskQueue.current);
+      //   console.log("ANSWER ADDED");
+      //   break;
+      // case SOCKET_CONSTANTS.GET_ICE_CANDIDATE:
+      //   console.log("GOT SOME ICE CANDIDATES", value.value);
+      //   const newPc = taskQueue.current.state.pc.map((pc) => {
+      //     if (pc.id === value.id) {
+      //       console.log("ADDING ICE CANDIDATE");
+      //       addIceCandidate(pc.pc, value.value);
+      //     }
+      //     return pc;
+      //   });
+      //   taskQueue.current.setState((prev) => ({
+      //     ...prev,
+      //     pc: newPc,
+      //   }));
+      //   break;
       default:
         return;
     }

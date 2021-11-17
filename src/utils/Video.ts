@@ -79,6 +79,8 @@ const setUpPeer = (pcId: string, stream: MediaStream, taskQueue: SynchronousTask
       stream: e.streams[0],
     };
     track.push(data);
+    console.log('GOT A TRACK');
+    
     taskQueue.setState((prev) => ({
       ...prev,
       track
