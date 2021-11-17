@@ -65,7 +65,7 @@ export const addTracksToVideo = (ref: RefObject<HTMLVideoElement>, stream: Media
 };
 
 
-const setUpPeer = (pcId: string, stream: MediaStream, taskQueue: SynchronousTaskManager) => {
+const setUpPeer = (pcId: string, stream: MediaStream, taskQueue: SynchronousTaskManager, ref: RefObject<HTMLVideoElement>) => {
   const pc = initiatePeerConnection();
   if (!pc || !stream)
     throw new Error(`SOME ISSUE WITH PC OR STREAM, ${pc}, ${stream}`);
@@ -80,6 +80,8 @@ const setUpPeer = (pcId: string, stream: MediaStream, taskQueue: SynchronousTask
       id: pcId,
       stream: e.streams[0],
     };
+    if (ref.current)
+      ref.current.srcObject = e.streams[0]
     track.push(data);
     console.log('GOT A TRACK');
 
@@ -92,9 +94,9 @@ const setUpPeer = (pcId: string, stream: MediaStream, taskQueue: SynchronousTask
 }
 
 
-export const initiateOfferNew = async (socketId: string, stream: MediaStream, taskQueue: SynchronousTaskManager) => {
+export const initiateOfferNew = async (socketId: string, stream: MediaStream, taskQueue: SynchronousTaskManager, ref: RefObject<HTMLVideoElement>) => {
   const pcId = uuidv4();
-  const pc = setUpPeer(pcId, stream, taskQueue);
+  const pc = setUpPeer(pcId, stream, taskQueue, ref);
 
   const candidates: RTCIceCandidate[] = [];
   pc.onicecandidate = (e) => {
@@ -138,8 +140,8 @@ interface AnswerProps {
 }
 
 
-export const initiateAnswersNew = async (data: AnswerProps, stream: MediaStream, taskQueue: SynchronousTaskManager) => {
-  const pc = setUpPeer(data.id, stream, taskQueue);
+export const initiateAnswersNew = async (data: AnswerProps, stream: MediaStream, taskQueue: SynchronousTaskManager,ref: RefObject<HTMLVideoElement>) => {
+  const pc = setUpPeer(data.id, stream, taskQueue,ref);
 
   try {
     await addRemoteDescription(pc, data.sdp);
