@@ -5,3 +5,4 @@ export const GET_ICE_CANDIDATE = "GET_ICE_CANDIDATE";
 export const REQUEST_OFFER = "REQUEST_OFFER";
 export const AUDIO_TOGGLE = "audio_toggle";
 export const DISCONNECTED = "DISCONNECTED";
+export const INITIATE_CONNECTION = "INITIATE_CONNECTION";

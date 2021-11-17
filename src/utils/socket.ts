@@ -1,61 +1,70 @@
+import { SynchronousTaskManager } from 'synchronous-task-manager';
 import { Socket } from "socket.io-client";
 import * as SOCKET_CONSTANTS from '../constants/socketConstant';
 
-export default function addSockets(socket: Socket, setSocketListener: Function) {
+interface DataType {
+    type: string,
+    value: any,
+    id: string | null
+}
 
-    socket.on("get_users", (data) => {
-        const initialUsers = data.map((value: any) => ({
-            isCompleted: false,
-            socketTo: value,
-            requests: [{ type: SOCKET_CONSTANTS.REQUEST_OFFER, isCompleted: false }],
-            id: undefined,
-        }));
-        setSocketListener(initialUsers);
+export default function addSockets(link: string, socket: Socket, taskQueue: SynchronousTaskManager, setSocketListener: Function) {
+
+
+    socket.on("connect", () => {
+        const socketId = socket.id;
+        socket.emit("room", { socketId, meetId: link });
+        const data = {
+            type: SOCKET_CONSTANTS.INITIATE_CONNECTION,
+            value: socketId,
+            id: null
+        } as DataType;
+        taskQueue.add(data);
+    });
+
+    socket.on("get_users", (initialUsers: string[]) => {
+        initialUsers.forEach((peer) => {
+            socket.emit('get_offer', {
+                socketFrom: socket.id,
+                socketTo: peer
+            })
+        })
     });
 
     socket.on("get_offer_request", (data) => {
         const result = {
-            socketTo: data,
+            value: data,
             id: null,
-            requests: [{ type: SOCKET_CONSTANTS.INITIATE_OFFER, isCompleted: false }],
-            isCompleted: false,
+            type: SOCKET_CONSTANTS.INITIATE_OFFER
         };
-        setSocketListener(result);
+        taskQueue.add(result);
     });
 
     socket.on("get_offer", (data) => {
         const result = {
             id: data.id,
-            socketTo: data.socketFrom,
-            requests: [
-                { type: SOCKET_CONSTANTS.INITIATE_ANSWER, isCompleted: false, value: data },
-            ],
+            value: data,
+            type: SOCKET_CONSTANTS.INITIATE_ANSWER,
         };
-        setSocketListener(result);
+        taskQueue.add(result);
     });
 
     socket.on("get_answer", function (data) {
         const result = {
             id: data.id,
-            socketTo: data.socketFrom,
-            requests: [{ type: SOCKET_CONSTANTS.ADD_ANSWER, value: data, isCompleted: false }],
+            value: data,
+            type: SOCKET_CONSTANTS.ADD_ANSWER
         };
-        setSocketListener(result);
+        taskQueue.add(result);
     });
 
     socket.on("get_ice_candidates", (data) => {
         const result = {
-            isCompleted: false,
             id: data.pcId,
-            requests: [
-                {
-                    type: SOCKET_CONSTANTS.GET_ICE_CANDIDATE,
-                    value: data.candidates,
-                    isCompleted: false,
-                },
-            ],
-        };
-        setSocketListener(result);
+            value: data.candidates,
+            type: SOCKET_CONSTANTS.GET_ICE_CANDIDATE,
+        }
+        taskQueue.add(result);
     });
 
     socket.on(SOCKET_CONSTANTS.AUDIO_TOGGLE, function (this: any, data) {

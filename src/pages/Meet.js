@@ -12,17 +12,12 @@ import {
   initiatePeerConnection,
   addTracksToVideo,
   getUserStream,
+  initiateOfferNew,
+  initiateAnswersNew,
+  addAnswerNew,
 } from "../utils/Video";
 import { io } from "socket.io-client";
-import {
-  ADD_ANSWER,
-  DISCONNECTED,
-  GET_ICE_CANDIDATE,
-  INITIATE_ANSWER,
-  INITIATE_OFFER,
-  REQUEST_OFFER,
-  AUDIO_TOGGLE,
-} from "../utils/constants";
+import * as SOCKET_CONSTANTS from "../constants/socketConstant";
 import { meetStyles } from "../theme/meet";
 import { Avatar, Grid, Typography, useMediaQuery } from "@material-ui/core";
 import BottomNavigation from "../components/BottomNavigation";
@@ -45,6 +40,7 @@ export default function Meet(props) {
   const [socket, setSocket] = useState(null);
   const [isBusy, setIsBusy] = useState(false);
   const [track, setTrack] = useState([]);
+  const [tracks, setTracks] = useState([]);
   const [pcRequestQueue, setPcRequestQueue] = useState([]);
   const [socketListener, setSocketListener] = useState(null);
   const [ice, setIce] = useState([]);
@@ -58,14 +54,11 @@ export default function Meet(props) {
   const history = useHistory();
   const styles = meetStyles();
   const videoRefs = useMemo(() => {
-    return state.pc.map((p) => ({
+    return tracks.map((p) => ({
       id: p.id,
       ref: createRef(),
-      name: p.name,
-      photo: p.photo,
-      audio: p.audio,
     }));
-  }, [state.pc]);
+  }, [tracks]);
 
   const selfVideoRef = useRef();
 
@@ -105,18 +98,116 @@ export default function Meet(props) {
 
   useEffect(() => {
     if (socket !== null) {
-      socket.on("connect", () => {
-        const socketId = socket.id;
-        socket.emit("room", { socketId, meetId: state.link });
-        setUser((oldState) => ({
-          ...oldState,
-          socketId,
-        }));
+      taskQueue.current.setState((_) => ({
+        pc: [],
+        track: [],
+        ice: [],
+      }));
+
+      taskQueue.current.onStateChange((prev, next) => {
+        const prevIce = prev.ice;
+        const nextIce = next.ice;
+
+        const prevTrack = prev.track;
+        const nextTrack = next.track;
+
+        if (prevTrack.length !== nextTrack.length) {
+          setTracks(nextTrack);
+        }
+
+        if (prevIce.length !== nextIce.length) {
+          const newIce = next.ice.map((ice) => {
+            if (!ice.isCompleted) {
+              ice.isCompleted = true;
+              socket.emit("send_ice_candidate", {
+                socketTo: ice.socketTo,
+                ...ice,
+              });
+            }
+            return ice;
+          });
+
+          taskQueue.current.setState((prev) => ({
+            ...prev,
+            ice: newIce,
+          }));
+        }
       });
-      addSockets(socket, setSocketListener);
+
+      taskQueue.current.listen(processTask);
+      addSockets(state.link, socket, taskQueue.current, setSocketListener);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket]);
+
+  const processTask = async (value) => {
+    switch (value.type) {
+      case SOCKET_CONSTANTS.INITIATE_CONNECTION:
+        console.log("CONNECTION INITIATED", value.value);
+        setUser((oldState) => ({
+          ...oldState,
+          socketId: value.value,
+        }));
+        break;
+      case SOCKET_CONSTANTS.INITIATE_OFFER:
+        console.log("INITIATE OFFER", value.value);
+        const peerConnectionOffer = await initiateOfferNew(
+          value.value,
+          state.stream,
+          taskQueue.current
+        );
+        const offerData = {
+          socketTo: value.value,
+          sdp: peerConnectionOffer.pc.localDescription,
+          id: peerConnectionOffer.id,
+          socketFrom: socket.id,
+          name: user.name,
+          audio: state.constraints.audio,
+        };
+        console.log("SENDING OFFER", offerData);
+        socket.emit("send_offer", offerData);
+        break;
+      case SOCKET_CONSTANTS.INITIATE_ANSWER:
+        console.log("GOT AN OFFER", value.value);
+        const peerConnectionAnswer = await initiateAnswersNew(
+          value.value,
+          state.stream,
+          taskQueue.current
+        );
+        const answerData = {
+          socketTo: value.value.socketFrom,
+          sdp: peerConnectionAnswer.pc.localDescription,
+          id: peerConnectionAnswer.id,
+          socketFrom: socket.id,
+          name: user.name,
+          audio: state.constraints.audio,
+        };
+        console.log("SENDING ANSWER", answerData);
+        socket.emit("send_answer", answerData);
+        break;
+      case SOCKET_CONSTANTS.ADD_ANSWER:
+        console.log("GOT AN ANSWER", value.value);
+        await addAnswerNew(value.value, taskQueue.current);
+        console.log("ANSWER ADDED");
+        break;
+      case SOCKET_CONSTANTS.GET_ICE_CANDIDATE:
+        console.log("GOT SOME ICE CANDIDATES", value.value);
+        const newPc = taskQueue.current.state.pc.map((pc) => {
+          if (pc.id === value.id) {
+            addIceCandidate(pc.pc, value.value);
+          }
+          return pc;
+        });
+        taskQueue.current.setState((prev) => ({
+          ...prev,
+          pc: newPc,
+        }));
+        break;
+      default:
+        return;
+    }
+    taskQueue.current.complete();
+  };
 
   useEffect(() => {
     if (socketListener !== null) {
@@ -166,41 +257,41 @@ export default function Meet(props) {
           };
           if (!request.isCompleted) {
             switch (request.type) {
-              case REQUEST_OFFER:
+              case SOCKET_CONSTANTS.REQUEST_OFFER:
                 socket.emit("get_offer", result);
                 setPcRequestQueue(
                   updatePcRequestArray(pcRequestQueue, index, request.type)
                 );
                 return false;
-              case INITIATE_OFFER:
+              case SOCKET_CONSTANTS.INITIATE_OFFER:
                 setIsBusy(true);
                 initiateOffer(pcRequest.socketTo);
                 setPcRequestQueue(
                   updatePcRequestArray(pcRequestQueue, index, request.type)
                 );
                 return false;
-              case INITIATE_ANSWER:
+              case SOCKET_CONSTANTS.INITIATE_ANSWER:
                 setIsBusy(true);
                 initiateAnswers(request.value);
                 setPcRequestQueue(
                   updatePcRequestArray(pcRequestQueue, index, request.type)
                 );
                 return false;
-              case ADD_ANSWER:
+              case SOCKET_CONSTANTS.ADD_ANSWER:
                 setIsBusy(true);
                 addAnswer({ ...request.value, ...result });
                 setPcRequestQueue(
                   updatePcRequestArray(pcRequestQueue, index, request.type)
                 );
                 return false;
-              case GET_ICE_CANDIDATE:
+              case SOCKET_CONSTANTS.GET_ICE_CANDIDATE:
                 setIsBusy(true);
                 setIceCandidates({
                   pcId: pcRequest.id,
                   candidates: request.value,
                 });
                 return false;
-              case DISCONNECTED:
+              case SOCKET_CONSTANTS.DISCONNECTED:
                 setIsBusy(true);
                 const updatedPc = removeConnection(state.pc, request.value);
                 setState((oldState) => ({
@@ -212,7 +303,7 @@ export default function Meet(props) {
                 );
                 setIsBusy(false);
                 return false;
-              case AUDIO_TOGGLE:
+              case SOCKET_CONSTANTS.AUDIO_TOGGLE:
                 setIsBusy(true);
                 const updatedPcs = toggleAudio(state.pc, request.value);
                 setState((oldState) => ({
@@ -257,14 +348,15 @@ export default function Meet(props) {
 
   useEffect(() => {
     videoRefs.forEach((videoRef) => {
-      let mediaTrack = track.filter((t) => t.id === videoRef.id);
+      let mediaTrack = tracks.filter((t) => t.id === videoRef.id);
       mediaTrack = mediaTrack?.[0]?.stream;
-      if (mediaTrack) {
+      console.log("ADDING STREAM", mediaTrack);
+      if (mediaTrack && videoRef.ref.current) {
         addTracksToVideo(videoRef.ref, mediaTrack);
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [videoRefs, track]);
+  }, [videoRefs, tracks]);
 
   useEffect(() => {
     state.pc.forEach((pc) => {
@@ -531,7 +623,7 @@ export default function Meet(props) {
           />
         )}
 
-        {videoRefs.map((v, index) => (
+        {tracks.map((v, index) => (
           <Grid
             key={index}
             className={styles.Grid}
@@ -543,24 +635,23 @@ export default function Meet(props) {
             }}
           >
             <div className={styles.UserDesc}>
-              <Avatar alt={v.name} src={v.photo} />
               <Typography variant="h6" color="secondary">
-                {v.name}
+                {/* {v.name} */}
               </Typography>
             </div>
             <div>
-              {v.audio ? null : (
+              {/* {v.audio ? null : (
                 <IconButton isSmall>
                   <AudioOff width={14} height={14} fill="white" />
                 </IconButton>
-              )}
+              )} */}
             </div>
             <video
               ref={v.ref}
               className={styles.video}
               autoPlay
               playsInline
-              muted={!v.audio}
+              muted={true}
             />
           </Grid>
         ))}

@@ -42,7 +42,6 @@ export const updatePcBeforeSendingOffer = (
     id: peerConnection.id,
     socketFrom: socketId,
     name: user.name,
-    photo: user.photo,
     audio: constraints.audio,
   };
   const newPc = pc.map((peer) => {
