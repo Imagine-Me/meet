@@ -9,13 +9,11 @@ interface StateProps {
   constraints: ConstraintsProps,
   stream: MediaStream | null,
   link: any,
-  pc: Array<any>
 }
 
 interface UserProps {
   isAuthenticated: boolean,
   name: string,
-  socketId: null | string
 }
 
 export const state = atom({
@@ -27,7 +25,6 @@ export const state = atom({
       video: false,
     },
     link: null,
-    pc: [],
   } as StateProps,
 });
 
@@ -36,6 +33,5 @@ export const user = atom({
   default: {
     isAuthenticated: false,
     name: '',
-    socketId: null,
   } as UserProps,
 });

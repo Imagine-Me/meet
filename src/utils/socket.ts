@@ -1,15 +1,15 @@
 import { SynchronousTaskManager } from 'synchronous-task-manager';
 import { Socket } from "socket.io-client";
 import * as SOCKET_CONSTANTS from '../constants/socketConstant';
+import { PcType } from './Video';
 
-interface DataType {
+export interface DataType {
     type: string,
     value: any,
     id: string | null
 }
 
-export default function addSockets(link: string, socket: Socket, taskQueue: SynchronousTaskManager) {
-
+export default function addSockets(link: string, socket: Socket, taskQueue: SynchronousTaskManager<PcType[], DataType>) {
 
     socket.on("connect", () => {
         const socketId = socket.id;
