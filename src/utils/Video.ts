@@ -1,12 +1,15 @@
-import { ConstraintsProps } from "../recoil/state";
+import { ConstraintsProps, state } from "../recoil/state";
 import { v4 as uuidv4 } from "uuid";
 import { SynchronousTaskManager } from "synchronous-task-manager";
 import { getPcById } from "./helper";
 import { RefObject } from "react";
+import * as SOCKET_CONSTANTS from '../constants/socketConstant'
 
 interface PcType {
   id: string;
-  pc: RTCPeerConnection
+  pc: RTCPeerConnection,
+  track: MediaStream | null,
+  ice: RTCIceCandidate[] | null
 }
 
 
@@ -65,7 +68,7 @@ export const addTracksToVideo = (ref: RefObject<HTMLVideoElement>, stream: Media
 };
 
 
-const setUpPeer = (pcId: string, stream: MediaStream, taskQueue: SynchronousTaskManager, ref: RefObject<HTMLVideoElement>) => {
+const setUpPeer = (pcId: string, stream: MediaStream, taskQueue: SynchronousTaskManager, ref: RefObject<HTMLVideoElement>, setPc: Function) => {
   const pc = initiatePeerConnection();
   if (!pc || !stream)
     throw new Error(`SOME ISSUE WITH PC OR STREAM, ${pc}, ${stream}`);
@@ -75,48 +78,54 @@ const setUpPeer = (pcId: string, stream: MediaStream, taskQueue: SynchronousTask
     .forEach((track) => pc.addTrack(track, stream));
 
   pc.ontrack = (e) => {
-    const track = [...taskQueue.state.track];
-    const data = {
-      id: pcId,
-      stream: e.streams[0],
-    };
-    if (ref.current)
-      ref.current.srcObject = e.streams[0]
-    track.push(data);
-    console.log('GOT A TRACK');
+    // const track = [...taskQueue.state.track];
+    // const data = {
+    //   id: pcId,
+    //   stream: e.streams[0],
+    // };
+    // if (ref.current)
+    //   ref.current.srcObject = e.streams[0]
+    // track.push(data);
+    // console.log('GOT A TRACK');
 
-    taskQueue.setState((prev) => ({
-      ...prev,
-      track
-    }))
+    // taskQueue.setState((prev) => ({
+    //   ...prev,
+    //   track
+    // }))
+    setPc((prev: PcType[]) => {
+      return prev.map(state => {
+        if (state.id === pcId) {
+          const tempData = { ...state }
+          tempData.track = e.streams[0];
+          return tempData;
+        }
+        return state;
+      })
+    })
+
   };
   return pc;
 }
 
 
-export const initiateOfferNew = async (socketId: string, stream: MediaStream, taskQueue: SynchronousTaskManager, ref: RefObject<HTMLVideoElement>) => {
+export const initiateOfferNew = async (socketId: string, stream: MediaStream, taskQueue: SynchronousTaskManager, ref: RefObject<HTMLVideoElement>, setPc: Function) => {
   const pcId = uuidv4();
-  const pc = setUpPeer(pcId, stream, taskQueue, ref);
+  const pc = setUpPeer(pcId, stream, taskQueue, ref, setPc);
 
   const candidates: RTCIceCandidate[] = [];
   pc.onicecandidate = (e) => {
     if (e.candidate) {
       candidates.push(e.candidate);
     } else {
-      const result = {
-        pcId,
-        candidates,
-        isCompleted: false,
-        socketId,
-      };
-      console.log('GOT SOME ICE', result);
-
-      const ice = [...taskQueue.state.ice];
-      ice.push(result);
-      taskQueue.setState((prev) => ({
-        ...prev,
-        ice
-      }))
+      taskQueue.add({
+        id: pcId,
+        type: SOCKET_CONSTANTS.SEND_ICE,
+        value: {
+          candidates,
+          pcId,
+          socketId
+        }
+      })
 
     }
   };
@@ -126,7 +135,14 @@ export const initiateOfferNew = async (socketId: string, stream: MediaStream, ta
   const peerConnection = {
     id: pcId,
     pc,
+    track: null
   } as PcType;
+
+  setPc((prev: PcType[]) => {
+    const temp = [...prev];
+    temp.push(peerConnection)
+    return temp;
+  })
 
   return peerConnection;
 };
@@ -140,8 +156,8 @@ interface AnswerProps {
 }
 
 
-export const initiateAnswersNew = async (data: AnswerProps, stream: MediaStream, taskQueue: SynchronousTaskManager,ref: RefObject<HTMLVideoElement>) => {
-  const pc = setUpPeer(data.id, stream, taskQueue,ref);
+export const initiateAnswersNew = async (data: AnswerProps, stream: MediaStream, taskQueue: SynchronousTaskManager, ref: RefObject<HTMLVideoElement>, setPc: Function) => {
+  const pc = setUpPeer(data.id, stream, taskQueue, ref, setPc);
 
   try {
     await addRemoteDescription(pc, data.sdp);
@@ -150,29 +166,25 @@ export const initiateAnswersNew = async (data: AnswerProps, stream: MediaStream,
     console.error("An error occurred", err);
   }
 
-  const peerConnections = [...taskQueue.state.pc];
   const peerConnection = {
     id: data.id,
     pc,
+    track: null
   } as PcType;
-  peerConnections.push(peerConnection);
-  taskQueue.setState((prev) => ({
-    ...prev,
-    pc: peerConnections
-  }))
+
+  setPc((prev: PcType[]) => {
+    const temp = [...prev];
+    temp.push(peerConnection)
+    return temp;
+  })
   return peerConnection;
 };
 
-export const addAnswerNew = (data: AnswerProps, taskQueue: SynchronousTaskManager) => {
-  const pcId = data.id;
+export const addAnswerNew = async (data: AnswerProps, pc: RTCPeerConnection) => {
   const sdp = data.sdp;
-  taskQueue.state.pc.forEach(async (pc: PcType) => {
-    if (pc.id === pcId) {
-      try {
-        await addRemoteDescription(pc.pc, sdp);
-      } catch {
-        throw new Error("COULDNT ADD ANSWER");
-      }
-    }
-  });
+  try {
+    await addRemoteDescription(pc, sdp);
+  } catch {
+    throw new Error("COULDNT ADD ANSWER");
+  }
 };

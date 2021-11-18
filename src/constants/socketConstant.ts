@@ -6,3 +6,4 @@ export const REQUEST_OFFER = "REQUEST_OFFER";
 export const AUDIO_TOGGLE = "audio_toggle";
 export const DISCONNECTED = "DISCONNECTED";
 export const INITIATE_CONNECTION = "INITIATE_CONNECTION";
+export const SEND_ICE = "SEND_ICE";
