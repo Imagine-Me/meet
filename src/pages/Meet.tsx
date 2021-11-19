@@ -30,7 +30,7 @@ import { SynchronousTaskManager } from "synchronous-task-manager";
 export default function Meet(props: any) {
   const [socket, setSocket] = useState<Socket | null>(null);
   // const [tracks, setTracks] = useState([]);
-  // const [pc, setPc] = useState([]);
+  const [pc, setPc] = useState<PcType[]>([]);
   const [state, setState] = useRecoilState(userState);
   const [user, setUser] = useRecoilState(userDetails);
 
@@ -40,6 +40,23 @@ export default function Meet(props: any) {
 
   const history = useHistory();
   const selfVideoRef = useRef<HTMLVideoElement>(null);
+
+  const videoRefs = useMemo(
+    () =>
+      pc.map((element) => ({
+        videoRef: createRef<HTMLVideoElement>(),
+        ...element,
+      })),
+    [pc]
+  );
+
+  useEffect(() => {
+    videoRefs.forEach((element) => {
+      if (element.videoRef.current) {
+        element.videoRef.current.srcObject = element.track;
+      }
+    });
+  }, [videoRefs]);
   useEffect(
     () => {
       const link = props.match.params.meetId;
@@ -57,13 +74,8 @@ export default function Meet(props: any) {
           console.log("SETTING INITIAL STATE OF PC IN TASK QUEUE");
           taskQueue.current.setState((_) => []);
 
-          taskQueue.current.onStateChange((_, currentState) => {
-            currentState.forEach((element: PcType) => {
-              if (selfVideoRef.current) {
-                console.log("SETTING STREAM", element.track);
-                selfVideoRef.current.srcObject = element.track;
-              }
-            });
+          taskQueue.current.onStateChange((_, currentState: PcType[]) => {
+            setPc(currentState);
           });
         }
       } else {
@@ -152,7 +164,7 @@ export default function Meet(props: any) {
 
   return (
     <div>
-      <video
+      {/* <video
         style={{
           width: "300px",
           height: "300px",
@@ -161,7 +173,19 @@ export default function Meet(props: any) {
         ref={selfVideoRef}
         autoPlay
         muted
-      />
+      /> */}
+      {videoRefs.map((video) => (
+        <video
+          style={{
+            width: "300px",
+            height: "300px",
+            marginRight: "10px",
+          }}
+          ref={video.videoRef}
+          autoPlay
+          muted
+        />
+      ))}
     </div>
   );
 }
