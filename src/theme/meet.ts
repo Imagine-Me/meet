@@ -26,8 +26,9 @@ export const meetStyles = makeStyles({
         width: "200px",
         height: "120px",
         position: "absolute",
-        right: "0",
-        top: "0",
+        right: "5px",
+        top: "5px",
+        border: "2px solid grey",
         borderRadius: "5px",
     },
     UserDesc: {

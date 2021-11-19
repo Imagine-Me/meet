@@ -11,7 +11,8 @@ export interface PcType {
   pc: RTCPeerConnection,
   track: MediaStream | null,
   name: string,
-  audio: boolean
+  audio: boolean,
+  color: string
 }
 
 export interface UserDetails {
@@ -148,7 +149,8 @@ export const initiateOffer = async (socketTo: string, userDetails: UserDetails, 
     pc,
     track: null,
     name: '',
-    audio: false
+    audio: false,
+    color: `#${(Math.random() * 0xFFFFFF << 0).toString(16).padStart(6, '0')}`
   } as PcType;
 
   taskQueue.setState((prev) => {
@@ -181,7 +183,8 @@ export const initiateAnswer = async (userDetails: UserDetails, data: AnswerProps
     pc,
     track: null,
     name: userDetails.name,
-    audio: userDetails.audio
+    audio: userDetails.audio,
+    color: `#${(Math.random() * 0xFFFFFF << 0).toString(16).padStart(6, '0')}`
   } as PcType;
 
 

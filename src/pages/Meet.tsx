@@ -7,6 +7,7 @@ import {
   useCallback,
 } from "react";
 import { RouteProps, useHistory } from "react-router";
+import VideoContainer from '../components/VideoContainer';
 import { useRecoilState } from "recoil";
 import { v4 as uuidv4 } from "uuid";
 import { state as userState, user as userDetails } from "../recoil/state";
@@ -14,6 +15,7 @@ import addSockets, { DataType } from "../utils/socket";
 import {
   addAnswer,
   addIceCandidate,
+  getUserStream,
   initiateAnswer,
   initiateOffer,
   PcType,
@@ -57,6 +59,50 @@ export default function Meet(props: any) {
       }
     });
   }, [videoRefs]);
+
+
+  useEffect(() => {
+    async function getUserMediaStream() {
+      if (state.stream) {
+        state.stream.getTracks().forEach(function (track) {
+          track.stop();
+        });
+      }
+      const stream = await getUserStream(state.constraints);
+      if (stream) {
+        setState((oldState) => ({
+          ...oldState,
+          stream,
+        }));
+        if (selfVideoRef.current) {
+          selfVideoRef.current.srcObject = stream;
+        }
+      }
+    }
+    getUserMediaStream();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.constraints]);
+
+  const videoButtonClickHandler = (type: string) => {
+    const constraints = { ...state.constraints };
+    switch (type) {
+      case "audio":
+        constraints.audio = !constraints.audio;
+        break;
+      case "video":
+        constraints.video = !constraints.video;
+        break;
+    }
+    setState((oldState) => ({
+      ...oldState,
+      constraints,
+    }));
+    return null;
+  };
+
+
+
+
   useEffect(
     () => {
       const link = props.match.params.meetId;
@@ -161,16 +207,20 @@ export default function Meet(props: any) {
 
   return (
     <div className={styles.mainContainer}>
-      {/* <video
-        style={{
-          width: "300px",
-          height: "300px",
-          marginRight: "10px",
-        }}
-        ref={selfVideoRef}
-        autoPlay
-        muted
-      /> */}
+      {/* {videoRefs.length===0 ? <video
+      className={styles.selfVideo}
+      ref={selfVideoRef}
+      autoPlay
+      muted
+      /> : <video
+      className={styles.selfVideo2}
+      ref={selfVideoRef}
+      autoPlay
+      muted
+    />} */}
+
+    <VideoContainer video audio={false} name='Prince' color="#2e663a"></VideoContainer>
+
       {videoRefs.map((video) => (
         <video
           style={{
@@ -184,7 +234,7 @@ export default function Meet(props: any) {
         />
       ))}
 
-      <BottomNavigation clickHandler={() => null} />
+      {/* <BottomNavigation clickHandler={() => null} /> */}
     </div>
   );
 }
