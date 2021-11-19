@@ -10,7 +10,8 @@ export interface PcType {
   id: string;
   pc: RTCPeerConnection,
   track: MediaStream | null,
-  ice: RTCIceCandidate[]
+  name: string,
+  audio: boolean
 }
 
 export interface UserDetails {
@@ -147,7 +148,8 @@ export const initiateOffer = async (socketTo: string, userDetails: UserDetails, 
     id: pcId,
     pc,
     track: null,
-    ice: []
+    name: '',
+    audio: false
   } as PcType;
 
   taskQueue.setState((prev) => {
@@ -178,7 +180,9 @@ export const initiateAnswer = async (userDetails: UserDetails, data: AnswerProps
   const peerConnection = {
     id: data.id,
     pc,
-    track: null
+    track: null,
+    name: userDetails.name,
+    audio: userDetails.audio
   } as PcType;
 
   taskQueue.setState((prev) => {
@@ -208,11 +212,26 @@ export const initiateAnswer = async (userDetails: UserDetails, data: AnswerProps
   return answerData;
 };
 
-export const addAnswer = async (data: AnswerProps, pc: RTCPeerConnection) => {
+export const addAnswer = async (data: AnswerProps, pcs: PcType[]) => {
   const sdp = data.sdp;
   try {
-    await addRemoteDescription(pc, sdp);
+    const pc: PcType | undefined = pcs.find(
+      (element) => element.id === data.id
+    );
+    if (pc) {
+      await addRemoteDescription(pc.pc, sdp);
+    }
   } catch {
     throw new Error("COULDNT ADD ANSWER");
   }
+
+  return pcs.map((pc) => {
+    if (pc.id === data.id) {
+      const temp = { ...pc };
+      temp.name = data.name;
+      temp.audio = data.audio;
+      return temp;
+    }
+    return pc;
+  })
 };

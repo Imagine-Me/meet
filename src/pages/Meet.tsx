@@ -116,13 +116,8 @@ export default function Meet(props: any) {
       case SOCKET_CONSTANTS.ADD_ANSWER:
         console.log("GOT AN ANSWER", value.value);
         if (taskQueue.current.state) {
-          const tempData: PcType | undefined = taskQueue.current.state.find(
-            (element) => element.id === value.id
-          );
-          if (tempData) {
-            await addAnswer(value.value, tempData.pc);
-            console.log("ANSWER ADDED", value.value);
-          }
+          const newPc = await addAnswer(value.value, taskQueue.current.state);
+          console.log("ANSWER ADDED", newPc);
         }
         break;
 
