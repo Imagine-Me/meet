@@ -141,15 +141,19 @@ export default function Meet(props: any) {
           }
         }
         break;
+      default:
+        return;
     }
+    taskQueue.current.complete();
   };
 
   const processTaskCallback = useCallback(processTask, [socket, user, state]);
 
   useEffect(() => {
-    taskQueue.current.listen(processTask);
-  }, [processTaskCallback]);
+    console.log("CURRENT PROCESS", taskQueue.current);
 
+    taskQueue.current.listen(processTaskCallback);
+  }, [processTaskCallback]);
 
   return (
     <div>
