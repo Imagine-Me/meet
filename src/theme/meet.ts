@@ -4,7 +4,7 @@ export const meetStyles = makeStyles({
     mainContainer: {
         backgroundColor: "#363636",
         width: "100%",
-        height: "calc(100% - 100px)",
+        height: "100%",
         position: "relative",
     },
     videoContainer: {
@@ -19,7 +19,7 @@ export const meetStyles = makeStyles({
     selfVideo: {
         objectFit: "cover",
         width: "100%",
-        height: `calc(${window.innerHeight}px - 100px)`,
+        height: "100%",
     },
     selfVideo2: {
         objectFit: "cover",

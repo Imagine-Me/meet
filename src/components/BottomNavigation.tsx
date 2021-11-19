@@ -1,11 +1,10 @@
 import { Box, makeStyles } from "@material-ui/core";
 import { useRecoilValue } from "recoil";
-import { Audio, AudioOff } from "../icons/Audio";
-import { Call } from "../icons/Call";
-import VideoIcon, { VideoOff } from "../icons/videoIcon";
 import { state as siteState } from "../recoil/state";
+import { MdOutlineCallEnd } from "react-icons/md";
 
 import { IconButton } from "./Button";
+import { AudioButton, VideoButton } from "./IconButtons";
 
 const useStyles = makeStyles({
   navigation: {
@@ -27,57 +26,27 @@ export default function BottomNavigation({ clickHandler }: Props) {
       bottom="0"
       left="0"
       right="0"
-      height="100px"
+      height="80px"
       display="flex"
       justifyContent="center"
       alignItems="center"
       boxShadow={2}
     >
       <div>
-        <IconButton
-          onClick={() => clickHandler("video")}
+        <VideoButton
           on={state.constraints.video}
-          isSmall={false}
-        >
-          {state.constraints.video ? (
-            <VideoIcon
-              width={25}
-              height={25}
-              fill={state.constraints.video ? "black" : "white"}
-            />
-          ) : (
-            <VideoOff
-              width={25}
-              height={25}
-              fill={state.constraints.video ? "black" : "white"}
-            />
-          )}
-        </IconButton>
-        <IconButton
-          onClick={() => clickHandler("audio")}
+          clickHandler={() => clickHandler("video")}
+        />
+        <AudioButton
           on={state.constraints.audio}
-          isSmall={false}
-        >
-          {state.constraints.audio ? (
-            <Audio
-              width={25}
-              height={25}
-              fill={state.constraints.audio ? "black" : "white"}
-            />
-          ) : (
-            <AudioOff
-              width={25}
-              height={25}
-              fill={state.constraints.audio ? "black" : "white"}
-            />
-          )}
-        </IconButton>
+          clickHandler={() => clickHandler("audio")}
+        />
         <IconButton
           onClick={() => clickHandler("disconnect")}
           on={false}
           isSmall={false}
         >
-          <Call width={25} height={25} color="white" />
+          <MdOutlineCallEnd size={20} color="white" />
         </IconButton>
       </div>
     </Box>

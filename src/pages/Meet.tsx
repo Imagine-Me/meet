@@ -40,7 +40,7 @@ export default function Meet(props: any) {
 
   const history = useHistory();
   const selfVideoRef = useRef<HTMLVideoElement>(null);
-
+  const styles = meetStyles();
   const videoRefs = useMemo(
     () =>
       pc.map((element) => ({
@@ -160,7 +160,7 @@ export default function Meet(props: any) {
   }, [processTaskCallback]);
 
   return (
-    <div>
+    <div className={styles.mainContainer}>
       {/* <video
         style={{
           width: "300px",
@@ -183,6 +183,8 @@ export default function Meet(props: any) {
           muted
         />
       ))}
+
+      <BottomNavigation clickHandler={() => null} />
     </div>
   );
 }
