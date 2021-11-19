@@ -261,3 +261,11 @@ export const toggleAudio = (data: ToggleAudioProps, pcs: PcType[]) => {
     return pc;
   })
 }
+
+export const disconnect = (socket: string, pcs: PcType[]) => {
+  const pc = pcs.find(element => element.socketId === socket);
+  if (pc) {
+    pc.pc.close();
+  }
+  return pcs.filter(element => element.socketId !== socket)
+}

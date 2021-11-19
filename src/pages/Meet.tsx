@@ -14,6 +14,7 @@ import addSockets, { DataType } from "../utils/socket";
 import {
   addAnswer,
   addIceCandidate,
+  disconnect,
   getUserStream,
   initiateAnswer,
   initiateOffer,
@@ -24,7 +25,7 @@ import {
 import { io, Socket } from "socket.io-client";
 import * as SOCKET_CONSTANTS from "../constants/socketConstant";
 import { meetStyles } from "../theme/meet";
-import { Grid, GridSize, Typography, useMediaQuery } from "@material-ui/core";
+import { Grid, GridSize, useMediaQuery } from "@material-ui/core";
 import BottomNavigation from "../components/BottomNavigation";
 import { desktopGridSize, mobileGridSize } from "../utils/gridSize";
 import { SynchronousTaskManager } from "synchronous-task-manager";
@@ -105,6 +106,9 @@ export default function Meet(props: any) {
       case "video":
         constraints.video = !constraints.video;
         break;
+      case "disconnect":
+        socket?.close();
+        history.push(`/`);
     }
     setState((oldState) => ({
       ...oldState,
@@ -209,10 +213,14 @@ export default function Meet(props: any) {
         break;
       case SOCKET_CONSTANTS.AUDIO_TOGGLE:
         if (taskQueue.current.state) {
-          const newPcs = toggleAudio(value.value, taskQueue.current.state);
-          console.log(newPcs);
-
-          taskQueue.current.setState((_) => newPcs);
+          const newPc = toggleAudio(value.value, taskQueue.current.state);
+          taskQueue.current.setState((_) => newPc);
+        }
+        break;
+      case SOCKET_CONSTANTS.DISCONNECTED:
+        if (taskQueue.current.state) {
+          const newPc = disconnect(value.value, taskQueue.current.state);
+          taskQueue.current.setState((_) => newPc);
         }
         break;
       default:

@@ -68,8 +68,6 @@ export default function addSockets(link: string, socket: Socket, taskQueue: Sync
     });
 
     socket.on(SOCKET_CONSTANTS.AUDIO_TOGGLE, function (this: any, data) {
-        console.log('HELLO THERE SOMEONE TOGGLED AUDIO', data);
-
         const result = {
             type: SOCKET_CONSTANTS.AUDIO_TOGGLE,
             value: data,
@@ -80,9 +78,10 @@ export default function addSockets(link: string, socket: Socket, taskQueue: Sync
 
     socket.on("disconnected", function (data) {
         const result = {
-            isCompleted: false,
-            requests: [{ type: SOCKET_CONSTANTS.DISCONNECTED, value: data, isCompleted: false }],
-        };
-        // setSocketListener(result);
+            value: data,
+            type: SOCKET_CONSTANTS.DISCONNECTED,
+            id: null
+        } as DataType;
+        taskQueue.add(result);
     });
 }
