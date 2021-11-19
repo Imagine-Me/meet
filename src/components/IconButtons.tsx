@@ -5,7 +5,7 @@ import { AiOutlineAudio, AiOutlineAudioMuted } from "react-icons/ai";
 
 interface Props {
   on: boolean;
-  clickHandler: () => null;
+  clickHandler: () => void;
 }
 
 export const VideoButton = ({ on, clickHandler }: Props) => {

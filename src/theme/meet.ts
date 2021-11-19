@@ -1,6 +1,10 @@
 import { makeStyles } from '@material-ui/core'
 
 export const meetStyles = makeStyles({
+    container: {
+        width: '100%',
+        height: '100%'
+    },
     mainContainer: {
         backgroundColor: "#363636",
         width: "100%",
@@ -12,24 +16,17 @@ export const meetStyles = makeStyles({
         width: "100%",
     },
     video: {
-        objectFit: "cover",
+        objectFit: "fill",
         width: "100%",
         height: "100%",
     },
-    selfVideo: {
-        objectFit: "cover",
-        width: "100%",
-        height: "100%",
-    },
-    selfVideo2: {
-        objectFit: "cover",
-        width: "200px",
-        height: "120px",
-        position: "absolute",
-        right: "5px",
-        top: "5px",
-        border: "2px solid grey",
-        borderRadius: "5px",
+    selfVideoSmall: {
+        position: 'absolute',
+        right: '5px',
+        top: '5px',
+        width: '200px',
+        height: '110px',
+        zIndex: 1000
     },
     UserDesc: {
         position: "absolute",

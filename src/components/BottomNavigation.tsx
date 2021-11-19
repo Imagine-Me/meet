@@ -5,7 +5,6 @@ import { MdOutlineCallEnd } from "react-icons/md";
 
 import { IconButton } from "./Button";
 import { AudioButton, VideoButton } from "./IconButtons";
-import { useEffect, useState } from "react";
 
 const useStyles = makeStyles({
   navigation: {
@@ -23,24 +22,13 @@ const useStyles = makeStyles({
 });
 
 interface Props {
-  clickHandler: (val: String) => null;
+  clickHandler: (val: string) => void;
+  show: boolean;
 }
 
-export default function BottomNavigation({ clickHandler }: Props) {
-  const [show, setShow] = useState(true);
+const BottomNavigation = ({ clickHandler, show }: Props) => {
   const state = useRecoilValue(siteState);
   const classes = useStyles();
-
-  useEffect(() => {
-    document.body.addEventListener("click", onClickBody);
-    return () => {
-      document.body.removeEventListener("click", onClickBody);
-    };
-  });
-  const onClickBody = () => {
-    console.log("Body Click works");
-    setShow((prev) => !prev);
-  };
   return (
     <Box
       className={classes.navigation}
@@ -66,4 +54,6 @@ export default function BottomNavigation({ clickHandler }: Props) {
       </div>
     </Box>
   );
-}
+};
+
+export default BottomNavigation;

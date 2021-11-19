@@ -6,10 +6,9 @@ import {
   useRef,
   useCallback,
 } from "react";
-import { RouteProps, useHistory } from "react-router";
-import VideoContainer from '../components/VideoContainer';
+import { useHistory } from "react-router";
+import VideoContainer from "../components/VideoContainer";
 import { useRecoilState } from "recoil";
-import { v4 as uuidv4 } from "uuid";
 import { state as userState, user as userDetails } from "../recoil/state";
 import addSockets, { DataType } from "../utils/socket";
 import {
@@ -24,7 +23,7 @@ import {
 import { io, Socket } from "socket.io-client";
 import * as SOCKET_CONSTANTS from "../constants/socketConstant";
 import { meetStyles } from "../theme/meet";
-import { Grid, Typography, useMediaQuery } from "@material-ui/core";
+import { Grid, GridSize, Typography, useMediaQuery } from "@material-ui/core";
 import BottomNavigation from "../components/BottomNavigation";
 import { desktopGridSize, mobileGridSize } from "../utils/gridSize";
 import { SynchronousTaskManager } from "synchronous-task-manager";
@@ -33,12 +32,11 @@ export default function Meet(props: any) {
   const [socket, setSocket] = useState<Socket | null>(null);
   // const [tracks, setTracks] = useState([]);
   const [pc, setPc] = useState<PcType[]>([]);
+  const [show, setShow] = useState<boolean>(true);
   const [state, setState] = useRecoilState(userState);
   const [user, setUser] = useRecoilState(userDetails);
 
   const taskQueue = useRef(new SynchronousTaskManager<PcType[], DataType>([]));
-
-  // const isDesktopWidth = useMediaQuery((theme) => theme.breakpoints.up("md"));
 
   const history = useHistory();
   const selfVideoRef = useRef<HTMLVideoElement>(null);
@@ -52,14 +50,26 @@ export default function Meet(props: any) {
     [pc]
   );
 
+  const isDesktopWidth = useMediaQuery((theme: any) =>
+    theme.breakpoints.up("md")
+  );
+
+  const { mobileGrid, desktopGrid } = useMemo(() => {
+    return {
+      mobileGrid: mobileGridSize(videoRefs.length),
+      desktopGrid: desktopGridSize(videoRefs.length),
+    };
+  }, [videoRefs]);
+
+
   useEffect(() => {
     videoRefs.forEach((element) => {
-      if (element.videoRef.current) {
+      if (element.videoRef.current && element.track) {
+        console.log("SETTING TRACK", element.track);
         element.videoRef.current.srcObject = element.track;
       }
     });
   }, [videoRefs]);
-
 
   useEffect(() => {
     async function getUserMediaStream() {
@@ -99,9 +109,6 @@ export default function Meet(props: any) {
     }));
     return null;
   };
-
-
-
 
   useEffect(
     () => {
@@ -207,34 +214,61 @@ export default function Meet(props: any) {
 
   return (
     <div className={styles.mainContainer}>
-      {/* {videoRefs.length===0 ? <video
-      className={styles.selfVideo}
-      ref={selfVideoRef}
-      autoPlay
-      muted
-      /> : <video
-      className={styles.selfVideo2}
-      ref={selfVideoRef}
-      autoPlay
-      muted
-    />} */}
+      <div
+        className={
+          videoRefs.length > 0 ? styles.selfVideoSmall : styles.videoContainer
+        }
+      >
+        <VideoContainer
+          video={state.constraints.video}
+          audio={state.constraints.audio}
+          name="You"
+          color="#2e663a"
+        >
+          <video
+            className={styles.video}
+            ref={selfVideoRef}
+            autoPlay
+            muted
+          ></video>
+        </VideoContainer>
+      </div>
+      <Grid
+        container
+        direction="row"
+        justifyContent="center"
+        alignItems="center"
+        spacing={0}
+      >
+        {videoRefs.map((v, index) => {
+          const mobileSize = mobileGrid.sizes[index] ?? 3;
+          const deskTopSize = desktopGrid.sizes[index] ?? 3;
+          console.log(isDesktopWidth, deskTopSize, mobileSize);
 
-    <VideoContainer video audio={false} name='Prince' color="#2e663a"></VideoContainer>
+          return (
+            <Grid
+              className={styles.Grid}
+              itemScope
+              item
+              xs={mobileSize as GridSize}
+              md={deskTopSize as GridSize}
+              style={{
+                height: isDesktopWidth ? desktopGrid.height : mobileGrid.height,
+              }}
+            >
+              <video
+                ref={v.videoRef}
+                className={styles.video}
+                autoPlay
+                playsInline
+                muted={!v.audio}
+              />
+            </Grid>
+          );
+        })}
+      </Grid>
 
-      {videoRefs.map((video) => (
-        <video
-          style={{
-            width: "300px",
-            height: "300px",
-            marginRight: "10px",
-          }}
-          ref={video.videoRef}
-          autoPlay
-          muted
-        />
-      ))}
-
-      <BottomNavigation clickHandler={() => null} />
+      <BottomNavigation clickHandler={videoButtonClickHandler} show={show} />
     </div>
   );
 }
