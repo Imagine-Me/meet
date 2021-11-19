@@ -61,7 +61,6 @@ export default function Meet(props: any) {
     };
   }, [videoRefs]);
 
-
   useEffect(() => {
     videoRefs.forEach((element) => {
       if (element.videoRef.current && element.track) {
@@ -181,6 +180,7 @@ export default function Meet(props: any) {
         console.log("GOT AN ANSWER", value.value);
         if (taskQueue.current.state) {
           const newPc = await addAnswer(value.value, taskQueue.current.state);
+          taskQueue.current.setState((_) => newPc);
           console.log("ANSWER ADDED", newPc);
         }
         break;
@@ -205,6 +205,7 @@ export default function Meet(props: any) {
     }
     taskQueue.current.complete();
   };
+  const toggleBottomNavigation = () => setShow((prev) => !prev);
 
   const processTaskCallback = useCallback(processTask, [socket, user, state]);
 
@@ -222,7 +223,7 @@ export default function Meet(props: any) {
         <VideoContainer
           video={state.constraints.video}
           audio={state.constraints.audio}
-          name="You"
+          name={`${user.name} (You)`}
           color="#2e663a"
         >
           <video
@@ -233,41 +234,51 @@ export default function Meet(props: any) {
           ></video>
         </VideoContainer>
       </div>
-      <Grid
-        container
-        direction="row"
-        justifyContent="center"
-        alignItems="center"
-        spacing={0}
-      >
-        {videoRefs.map((v, index) => {
-          const mobileSize = mobileGrid.sizes[index] ?? 3;
-          const deskTopSize = desktopGrid.sizes[index] ?? 3;
-          console.log(isDesktopWidth, deskTopSize, mobileSize);
+      <div onClick={toggleBottomNavigation}>
+        <Grid
+          container
+          direction="row"
+          justifyContent="center"
+          alignItems="center"
+          spacing={0}
+        >
+          {videoRefs.map((v, index) => {
+            const mobileSize = mobileGrid.sizes[index] ?? 3;
+            const deskTopSize = desktopGrid.sizes[index] ?? 3;
+            console.log(isDesktopWidth, deskTopSize, mobileSize);
 
-          return (
-            <Grid
-              className={styles.Grid}
-              itemScope
-              item
-              xs={mobileSize as GridSize}
-              md={deskTopSize as GridSize}
-              style={{
-                height: isDesktopWidth ? desktopGrid.height : mobileGrid.height,
-              }}
-            >
-              <video
-                ref={v.videoRef}
-                className={styles.video}
-                autoPlay
-                playsInline
-                muted={!v.audio}
-              />
-            </Grid>
-          );
-        })}
-      </Grid>
-
+            return (
+              <Grid
+                className={styles.Grid}
+                itemScope
+                item
+                xs={mobileSize as GridSize}
+                md={deskTopSize as GridSize}
+                style={{
+                  height: isDesktopWidth
+                    ? desktopGrid.height
+                    : mobileGrid.height,
+                }}
+              >
+                <VideoContainer
+                  video={state.constraints.video}
+                  audio={state.constraints.audio}
+                  name={v.name}
+                  color={v.color}
+                >
+                  <video
+                    ref={v.videoRef}
+                    className={styles.video}
+                    autoPlay
+                    playsInline
+                    muted={!v.audio}
+                  />
+                </VideoContainer>
+              </Grid>
+            );
+          })}
+        </Grid>
+      </div>
       <BottomNavigation clickHandler={videoButtonClickHandler} show={show} />
     </div>
   );

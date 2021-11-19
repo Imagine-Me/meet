@@ -182,8 +182,8 @@ export const initiateAnswer = async (userDetails: UserDetails, data: AnswerProps
     id: data.id,
     pc,
     track: null,
-    name: userDetails.name,
-    audio: userDetails.audio,
+    name: data.name,
+    audio: data.audio,
     color: `#${(Math.random() * 0xFFFFFF << 0).toString(16).padStart(6, '0')}`
   } as PcType;
 
@@ -229,6 +229,7 @@ export const addAnswer = async (data: AnswerProps, pcs: PcType[]) => {
     throw new Error("COULDNT ADD ANSWER");
   }
 
+  
   return pcs.map((pc) => {
     if (pc.id === data.id) {
       const temp = { ...pc };
