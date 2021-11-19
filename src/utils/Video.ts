@@ -1,8 +1,6 @@
-import { ConstraintsProps, state } from "../recoil/state";
+import { ConstraintsProps } from "../recoil/state";
 import { v4 as uuidv4 } from "uuid";
 import { SynchronousTaskManager } from "synchronous-task-manager";
-import { getPcById } from "./helper";
-import { RefObject } from "react";
 import * as SOCKET_CONSTANTS from '../constants/socketConstant'
 import { DataType } from "./socket";
 
