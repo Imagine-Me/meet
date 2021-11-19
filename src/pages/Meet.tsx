@@ -234,7 +234,7 @@ export default function Meet(props: any) {
         />
       ))}
 
-      {/* <BottomNavigation clickHandler={() => null} /> */}
+      <BottomNavigation clickHandler={() => null} />
     </div>
   );
 }

@@ -5,10 +5,20 @@ import { MdOutlineCallEnd } from "react-icons/md";
 
 import { IconButton } from "./Button";
 import { AudioButton, VideoButton } from "./IconButtons";
+import { useEffect, useState } from "react";
 
 const useStyles = makeStyles({
   navigation: {
     backgroundColor: "white",
+    transform: "translate(0,80px)",
+    transition: "0.5s",
+    position: "fixed",
+    left: 0,
+    right: 0,
+    height: "80px",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
 
@@ -17,19 +27,24 @@ interface Props {
 }
 
 export default function BottomNavigation({ clickHandler }: Props) {
+  const [show, setShow] = useState(true);
   const state = useRecoilValue(siteState);
   const classes = useStyles();
+
+  useEffect(() => {
+    document.body.addEventListener("click", onClickBody);
+    return () => {
+      document.body.removeEventListener("click", onClickBody);
+    };
+  });
+  const onClickBody = () => {
+    console.log("Body Click works");
+    setShow((prev) => !prev);
+  };
   return (
     <Box
       className={classes.navigation}
-      position="fixed"
-      bottom="0"
-      left="0"
-      right="0"
-      height="80px"
-      display="flex"
-      justifyContent="center"
-      alignItems="center"
+      bottom={show ? "80px" : "-81px"}
       boxShadow={2}
     >
       <div>
