@@ -96,7 +96,6 @@ const setUpPeer = (pcId: string, stream: MediaStream, taskQueue: SynchronousTask
     .forEach((track) => pc.addTrack(track, stream));
 
   pc.ontrack = (e) => {
-    console.log('GOT A TRACK', taskQueue.state);
     taskQueue.setState((prev) => {
       if (prev) {
         return prev.map(element => {
@@ -136,7 +135,7 @@ export const initiateOffer = async (socketTo: string, userDetails: UserDetails, 
       taskQueue.add({
         type: SOCKET_CONSTANTS.SEND_ICE,
         value: candidateData,
-        id: null
+        id: pcId
       })
 
     }
@@ -185,10 +184,12 @@ export const initiateAnswer = async (userDetails: UserDetails, data: AnswerProps
     audio: userDetails.audio
   } as PcType;
 
+
   taskQueue.setState((prev) => {
     if (Array.isArray(prev)) {
       const temp = [...prev];
       temp.push(peerConnection)
+      return temp;
     }
     return [peerConnection];
   })

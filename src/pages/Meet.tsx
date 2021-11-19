@@ -66,7 +66,6 @@ export default function Meet(props: any) {
       }));
       if (user.isAuthenticated) {
         if (process.env.REACT_APP_BASE_URL) {
-          console.log("SOCKET ADDED");
           const socketTemp = io(process.env.REACT_APP_BASE_URL);
           setSocket(socketTemp);
           addSockets(link, socketTemp, taskQueue.current);
@@ -157,8 +156,6 @@ export default function Meet(props: any) {
   const processTaskCallback = useCallback(processTask, [socket, user, state]);
 
   useEffect(() => {
-    console.log("CURRENT PROCESS", taskQueue.current);
-
     taskQueue.current.listen(processTaskCallback);
   }, [processTaskCallback]);
 
