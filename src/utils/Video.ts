@@ -10,12 +10,15 @@ export interface PcType {
   track: MediaStream | null,
   name: string,
   audio: boolean,
-  color: string
+  color: string,
+  video: boolean,
+  socketId: string
 }
 
 export interface UserDetails {
   name: String;
   audio: boolean;
+  video: boolean;
   socketFrom: null | string;
 }
 
@@ -147,7 +150,9 @@ export const initiateOffer = async (socketTo: string, userDetails: UserDetails, 
     pc,
     track: null,
     name: '',
-    audio: false,
+    audio: true,
+    video: true,
+    socketId: socketTo,
     color: `#${(Math.random() * 0xFFFFFF << 0).toString(16).padStart(6, '0')}`
   } as PcType;
 
@@ -182,6 +187,8 @@ export const initiateAnswer = async (userDetails: UserDetails, data: AnswerProps
     track: null,
     name: data.name,
     audio: data.audio,
+    video: true,
+    socketId: data.socketFrom,
     color: `#${(Math.random() * 0xFFFFFF << 0).toString(16).padStart(6, '0')}`
   } as PcType;
 
@@ -227,7 +234,7 @@ export const addAnswer = async (data: AnswerProps, pcs: PcType[]) => {
     throw new Error("COULDNT ADD ANSWER");
   }
 
-  
+
   return pcs.map((pc) => {
     if (pc.id === data.id) {
       const temp = { ...pc };
@@ -238,3 +245,19 @@ export const addAnswer = async (data: AnswerProps, pcs: PcType[]) => {
     return pc;
   })
 };
+
+interface ToggleAudioProps {
+  socket: string;
+  audio: boolean;
+}
+
+export const toggleAudio = (data: ToggleAudioProps, pcs: PcType[]) => {
+  return pcs.map((pc) => {
+    if (pc.socketId === data.socket) {
+      const temp = { ...pc };
+      temp.audio = data.audio;
+      return temp;
+    }
+    return pc;
+  })
+}

@@ -18,6 +18,7 @@ import {
   initiateAnswer,
   initiateOffer,
   PcType,
+  toggleAudio,
   UserDetails,
 } from "../utils/Video";
 import { io, Socket } from "socket.io-client";
@@ -70,33 +71,36 @@ export default function Meet(props: any) {
     });
   }, [videoRefs]);
 
-  useEffect(() => {
-    async function getUserMediaStream() {
-      if (state.stream) {
-        state.stream.getTracks().forEach(function (track) {
-          track.stop();
-        });
-      }
-      const stream = await getUserStream(state.constraints);
-      if (stream) {
-        setState((oldState) => ({
-          ...oldState,
-          stream,
-        }));
-        if (selfVideoRef.current) {
-          selfVideoRef.current.srcObject = stream;
-        }
-      }
-    }
-    getUserMediaStream();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.constraints]);
+  // useEffect(() => {
+  //   async function getUserMediaStream() {
+  //     if (state.stream) {
+  //       state.stream.getTracks().forEach(function (track) {
+  //         track.stop();
+  //       });
+  //     }
+  //     const stream = await getUserStream(state.constraints);
+  //     if (stream) {
+  //       setState((oldState) => ({
+  //         ...oldState,
+  //         stream,
+  //       }));
+  //       if (selfVideoRef.current) {
+  //         selfVideoRef.current.srcObject = stream;
+  //       }
+  //     }
+  //   }
+  //   getUserMediaStream();
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [state.constraints]);
 
   const videoButtonClickHandler = (type: string) => {
     const constraints = { ...state.constraints };
     switch (type) {
       case "audio":
         constraints.audio = !constraints.audio;
+        socket?.emit("toggle_audio", {
+          audio: constraints.audio,
+        });
         break;
       case "video":
         constraints.video = !constraints.video;
@@ -128,6 +132,9 @@ export default function Meet(props: any) {
           taskQueue.current.onStateChange((_, currentState: PcType[]) => {
             setPc(currentState);
           });
+          if (selfVideoRef.current) {
+            selfVideoRef.current.srcObject = state.stream;
+          }
         }
       } else {
         history.push(`/?redirect=${link}`);
@@ -140,7 +147,7 @@ export default function Meet(props: any) {
   const processTask = async (value: DataType) => {
     const userDetail = {
       name: user.name,
-      audio: state.constraints.audio,
+      ...state.constraints,
       socketFrom: socket?.id,
     } as UserDetails;
 
@@ -198,6 +205,14 @@ export default function Meet(props: any) {
           if (tempData) {
             addIceCandidate(tempData.pc, value.value);
           }
+        }
+        break;
+      case SOCKET_CONSTANTS.AUDIO_TOGGLE:
+        if (taskQueue.current.state) {
+          const newPcs = toggleAudio(value.value, taskQueue.current.state);
+          console.log(newPcs);
+
+          taskQueue.current.setState((_) => newPcs);
         }
         break;
       default:
@@ -261,8 +276,8 @@ export default function Meet(props: any) {
                 }}
               >
                 <VideoContainer
-                  video={state.constraints.video}
-                  audio={state.constraints.audio}
+                  video={v.video}
+                  audio={v.audio}
                   name={v.name}
                   color={v.color}
                 >

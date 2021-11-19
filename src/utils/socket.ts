@@ -36,7 +36,7 @@ export default function addSockets(link: string, socket: Socket, taskQueue: Sync
             value: data,
             id: null,
             type: SOCKET_CONSTANTS.INITIATE_OFFER
-        };
+        } as DataType;
         taskQueue.add(result);
     });
 
@@ -45,7 +45,7 @@ export default function addSockets(link: string, socket: Socket, taskQueue: Sync
             id: data.id,
             value: data,
             type: SOCKET_CONSTANTS.INITIATE_ANSWER,
-        };
+        } as DataType;
         taskQueue.add(result);
     });
 
@@ -54,7 +54,7 @@ export default function addSockets(link: string, socket: Socket, taskQueue: Sync
             id: data.id,
             value: data,
             type: SOCKET_CONSTANTS.ADD_ANSWER
-        };
+        } as DataType;
         taskQueue.add(result);
     });
 
@@ -63,18 +63,19 @@ export default function addSockets(link: string, socket: Socket, taskQueue: Sync
             id: data.pcId,
             value: data.candidates,
             type: SOCKET_CONSTANTS.GET_ICE_CANDIDATE,
-        }
+        } as DataType;
         taskQueue.add(result);
     });
 
     socket.on(SOCKET_CONSTANTS.AUDIO_TOGGLE, function (this: any, data) {
-        if (data.socket !== this.id) {
-            const result = {
-                isCompleted: false,
-                requests: [{ type: SOCKET_CONSTANTS.AUDIO_TOGGLE, value: data, isCompleted: false }],
-            };
-            // setSocketListener(result);
-        }
+        console.log('HELLO THERE SOMEONE TOGGLED AUDIO', data);
+
+        const result = {
+            type: SOCKET_CONSTANTS.AUDIO_TOGGLE,
+            value: data,
+            id: null
+        } as DataType;
+        taskQueue.add(result)
     });
 
     socket.on("disconnected", function (data) {
