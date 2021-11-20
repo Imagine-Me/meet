@@ -289,6 +289,18 @@ export default function Meet(props: any) {
     [socket, user, state]
   );
 
+  const copyToClipBoard = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setSnackState({
+        message: "Link copied to clipboard",
+        type: "info",
+        show: true,
+      });
+      setShowDialog(false);
+    } catch {}
+  };
+
   useEffect(() => {
     taskQueue.current.listen(processTaskCallback);
   }, [processTaskCallback]);
@@ -359,13 +371,17 @@ export default function Meet(props: any) {
           })}
         </Grid>
       </div>
-      <BottomNavigation clickHandler={videoButtonClickHandler} show={show} />
+      <BottomNavigation
+        clickHandler={videoButtonClickHandler}
+        show={show}
+        copyToClipboard={copyToClipBoard}
+      />
       <LinkDialog
         open={showDialog}
         handleClose={() => {
           setShowDialog(false);
         }}
-        link={window.location.href}
+        copyToClipboard={copyToClipBoard}
       />
     </div>
   );

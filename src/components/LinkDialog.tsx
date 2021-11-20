@@ -7,27 +7,13 @@ import {
   DialogActions,
   Button,
 } from "@mui/material";
-import { useSetRecoilState } from "recoil";
-import { snackbar } from "../recoil/state";
 interface Props {
   open: boolean;
-  link: string;
   handleClose: () => void;
+  copyToClipboard: () => void;
 }
 
-export const LinkDialog = ({ open, handleClose, link }: Props) => {
-  const setSnackState = useSetRecoilState(snackbar);
-  const copyToClipBoard = async () => {
-    try {
-      await navigator.clipboard.writeText(link);
-      setSnackState({
-        message: "Copied to clipboard",
-        type: "info",
-        show: true,
-      });
-      handleClose();
-    } catch {}
-  };
+export const LinkDialog = ({ open, handleClose, copyToClipboard }: Props) => {
   return (
     <Dialog
       open={open}
@@ -40,13 +26,13 @@ export const LinkDialog = ({ open, handleClose, link }: Props) => {
         <DialogContentText id="alert-dialog-description">
           Share the following link to your friends to join the meet.
           <Alert severity="success" sx={{ mt: 1 }}>
-            {link}
+            {window.location.href}
           </Alert>
         </DialogContentText>
       </DialogContent>
       <DialogActions>
         <Button onClick={handleClose}>Close</Button>
-        <Button onClick={copyToClipBoard} autoFocus>
+        <Button onClick={copyToClipboard} autoFocus>
           Copy
         </Button>
       </DialogActions>
