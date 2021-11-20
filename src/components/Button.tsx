@@ -13,12 +13,20 @@ const useStyles = makeStyles({
     minWidth: "20px"
   },
   big: {
-    width: "65px",
-    height: "65px",
+    width: "50px",
+    height: "50px",
+    minWidth: "20px"
   },
 });
 
-export const IconButton = ({ children, on, onClick, isSmall }) => {
+interface Props{
+  children: React.ReactNode,
+  on: boolean,
+  onClick: () => void,
+  isSmall: boolean
+}
+
+export const IconButton = ({ children, on, onClick, isSmall } : Props) => {
   const style = useStyles();
   return (
     <Button

@@ -14,7 +14,11 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function Navigation({ modalHandler }) {
+interface Props {
+  modalHandler: () => null;
+}
+
+export default function Navigation({ modalHandler }: Props) {
   const user = useRecoilValue(userState);
 
   const classes = useStyles();
@@ -32,7 +36,7 @@ export default function Navigation({ modalHandler }) {
           Meet
         </Typography>
       </div>
-      <Button onClick={user.isAuthenticated ? null : modalHandler}>
+      <Button onClick={user.isAuthenticated ? undefined : modalHandler}>
         <User />
         <div style={{ marginLeft: "5px" }}>{user.name ?? "Login"}</div>
       </Button>

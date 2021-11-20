@@ -16,7 +16,13 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function Video({ image, name, children }) {
+interface Props{
+  image: string,
+  name: string,
+  children: React.ReactNode
+}
+
+export default function Video({ image, name, children }: Props) {
   const classes = useStyles();
   return (
     <div className={classes.videoContainer}>
