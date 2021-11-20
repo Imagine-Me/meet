@@ -20,7 +20,7 @@ interface Props {
 }
 
 export default function UserAvatar({ size, name, color }: Props) {
-  const fontSize: number = size - 10 > 0 ? size - 40 : 5;
+  const fontSize: number = (size - 10) > 0 ? (size - 40) : 5;
   const styles = useStyle();
   return (
     <div

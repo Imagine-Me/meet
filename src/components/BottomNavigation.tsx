@@ -13,6 +13,7 @@ interface Props {
   show: boolean;
   count: number;
   copyToClipboard: () => void;
+  showDrawer: () => void;
 }
 
 const useStyles = makeStyles({
@@ -40,6 +41,7 @@ const BottomNavigation = ({
   show,
   copyToClipboard,
   count,
+  showDrawer,
 }: Props) => {
   const state = useRecoilValue(siteState);
   const classes = useStyles();
@@ -83,7 +85,7 @@ const BottomNavigation = ({
               }}
               variant="contained"
               color="inherit"
-              onClick={() => clickHandler("disconnect")}
+              onClick={showDrawer}
             >
               <AiOutlineUser size={20} />
             </Button>

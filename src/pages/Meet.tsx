@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useHistory } from "react-router";
 import VideoContainer from "../components/VideoContainer";
+import ListDrawer from "../components/ListDrawer";
 import { useRecoilState, useSetRecoilState } from "recoil";
 import { LinkDialog } from "../components/LinkDialog";
 import {
@@ -40,11 +41,19 @@ import BottomNavigation from "../components/BottomNavigation";
 import { desktopGridSize, mobileGridSize } from "../utils/gridSize";
 import { SynchronousTaskManager } from "synchronous-task-manager";
 
+export interface UserList {
+  name: string;
+  color: string;
+  audio: boolean;
+  video: boolean;
+}
+
 export default function Meet(props: any) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [showDialog, setShowDialog] = useState<boolean>(false);
   const [pc, setPc] = useState<PcType[]>([]);
   const [show, setShow] = useState<boolean>(true);
+  const [showDrawer, setShowDrawer] = useState<boolean>(false);
   const [state, setState] = useRecoilState(userState);
   const [user, setUser] = useRecoilState(userDetails);
   const setSnackState = useSetRecoilState(snackbar);
@@ -60,6 +69,20 @@ export default function Meet(props: any) {
         videoRef: createRef<HTMLVideoElement>(),
         ...element,
       })),
+    [pc]
+  );
+
+  const userList = useMemo(
+    () =>
+      pc.map(
+        (element) =>
+          ({
+            name: element.name,
+            color: element.color,
+            audio: element.audio,
+            video: element.video,
+          } as UserList)
+      ),
     [pc]
   );
 
@@ -374,8 +397,9 @@ export default function Meet(props: any) {
       <BottomNavigation
         clickHandler={videoButtonClickHandler}
         show={show}
-        count={videoRefs.length}
+        count={userList.length}
         copyToClipboard={copyToClipBoard}
+        showDrawer={() => setShowDrawer((prev) => !prev)}
       />
       <LinkDialog
         open={showDialog}
@@ -383,6 +407,11 @@ export default function Meet(props: any) {
           setShowDialog(false);
         }}
         copyToClipboard={copyToClipBoard}
+      />
+      <ListDrawer
+        open={showDrawer}
+        users={userList}
+        closeDrawer={() => setShowDrawer(false)}
       />
     </div>
   );
