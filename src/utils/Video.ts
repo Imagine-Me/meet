@@ -56,7 +56,6 @@ export const initiatePeerConnection = () => {
 };
 
 export const createOffer = async (pc: RTCPeerConnection) => {
-  console.log("CREATED OFFER");
   const sdp = await pc.createOffer({
     offerToReceiveVideo: true,
     offerToReceiveAudio: true,
@@ -79,15 +78,10 @@ export const answerOffer = async (pc: RTCPeerConnection) => {
 };
 
 export const addIceCandidate = (pc: RTCPeerConnection, candidates: RTCIceCandidate[]) => {
-  console.log('ADDING TO ', pc, 'CANDIDATES', candidates);
   candidates.forEach((candidate: any) =>
     pc.addIceCandidate(new RTCIceCandidate(candidate))
   );
 };
-// export const addTracksToVideo = (ref: RefObject<HTMLVideoElement>, stream: MediaStream) => {
-//   if (ref.current)
-//     ref.current.srcObject = stream;
-// };
 
 export const addTracksToPc = (pc: RTCPeerConnection, stream: MediaStream, prevVideoSender?: RTCRtpSender | null) => {
 
@@ -114,7 +108,6 @@ const setUpPeer = (pcId: string, stream: MediaStream, taskQueue: SynchronousTask
   const videoSender = addTracksToPc(pc, stream);
 
   pc.ontrack = (e) => {
-    console.log('GOT A NEW TRACK....', e.streams[0]);
 
     taskQueue.setState((prev) => {
       if (prev) {
@@ -194,7 +187,6 @@ export const initiateOffer = async (socketTo: string, userDetails: UserDetails, 
 };
 
 export const renegotiateOffer = async (pc: PcType, userDetails: UserDetails) => {
-  console.log('LOCAL DESCRIPTION BEFORE NEGOTIATION', pc.pc.localDescription);
 
   await createOffer(pc.pc);
   const offerData = {
@@ -203,7 +195,6 @@ export const renegotiateOffer = async (pc: PcType, userDetails: UserDetails) => 
     socketTo: pc.socketId,
     sdp: pc.pc.localDescription
   }
-  console.log('LOCAL DESCRIPTION AFTER NEGOTIATION', pc.pc.localDescription);
   return offerData;
 }
 

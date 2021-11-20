@@ -74,7 +74,6 @@ export default function Meet(props: any) {
   useEffect(() => {
     videoRefs.forEach((element) => {
       if (element.videoRef.current && element.track) {
-        console.log("SETTING TRACK", element.track);
         element.videoRef.current.srcObject = element.track;
       }
     });
@@ -108,7 +107,6 @@ export default function Meet(props: any) {
         temp.videoSender = videoSender;
         return temp;
       });
-      console.log("NEW PC", await Promise.all(newPc));
     }
     setState((oldState) => ({
       ...oldState,
@@ -156,8 +154,6 @@ export default function Meet(props: any) {
           const socketTemp = io(process.env.REACT_APP_BASE_URL);
           setSocket(socketTemp);
           addSockets(link, socketTemp, taskQueue.current);
-
-          console.log("SETTING INITIAL STATE OF PC IN TASK QUEUE");
           taskQueue.current.setState((_) => []);
 
           taskQueue.current.onStateChange((_, currentState: PcType[]) => {
@@ -184,26 +180,22 @@ export default function Meet(props: any) {
 
     switch (value.type) {
       case SOCKET_CONSTANTS.INITIATE_CONNECTION:
-        console.log("CONNECTION INITIATED", value.value);
         setUser((oldState) => ({
           ...oldState,
           socketId: value.value,
         }));
         break;
       case SOCKET_CONSTANTS.INITIATE_OFFER:
-        console.log("INITIATE OFFER", value.value);
         const offerData = await initiateOffer(
           value.value,
           userDetail,
           state.stream,
           taskQueue.current
         );
-        console.log("SENDING OFFER.....", offerData);
         socket?.emit("send_offer", offerData);
         break;
 
       case SOCKET_CONSTANTS.INITIATE_ANSWER:
-        console.log("GOT AN OFFER", value.value);
         let tempPc = null;
         let answerData = null;
         if (taskQueue.current && taskQueue.current.state) {
@@ -212,8 +204,6 @@ export default function Meet(props: any) {
           );
         }
         if (tempPc) {
-          console.log("RENEGOTIATING ANSWER");
-
           answerData = await renegotiateAnswer(tempPc, value.value, userDetail);
         } else {
           answerData = await initiateAnswer(
@@ -223,25 +213,20 @@ export default function Meet(props: any) {
             taskQueue.current
           );
         }
-        console.log("SENDING ANSWER", answerData);
         socket?.emit("send_answer", answerData);
         break;
 
       case SOCKET_CONSTANTS.ADD_ANSWER:
-        console.log("GOT AN ANSWER", value.value);
         if (taskQueue.current.state) {
           const newPc = await addAnswer(value.value, taskQueue.current.state);
           taskQueue.current.setState((_) => newPc);
-          console.log("ANSWER ADDED", newPc);
         }
         break;
 
       case SOCKET_CONSTANTS.SEND_ICE:
-        console.log("SENDING ICE...", value.value);
         socket?.emit("send_ice_candidate", value.value);
         break;
       case SOCKET_CONSTANTS.GET_ICE_CANDIDATE:
-        console.log("GOT SOME ICE CANDIDATES", value.value);
         if (taskQueue.current.state) {
           const tempData: PcType | undefined = taskQueue.current.state.find(
             (element) => element.id === value.id
@@ -314,7 +299,6 @@ export default function Meet(props: any) {
           {videoRefs.map((v, index) => {
             const mobileSize = mobileGrid.sizes[index] ?? 3;
             const deskTopSize = desktopGrid.sizes[index] ?? 3;
-            console.log(isDesktopWidth, deskTopSize, mobileSize);
 
             return (
               <Grid
