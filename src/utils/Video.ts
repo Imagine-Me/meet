@@ -12,7 +12,8 @@ export interface PcType {
   audio: boolean,
   color: string,
   video: boolean,
-  socketId: string
+  socketId: string,
+  videoSender: RTCRtpSender | null
 }
 
 export interface UserDetails {
@@ -29,6 +30,7 @@ interface AnswerProps {
   name: string;
   sdp: any;
   socketFrom: string;
+  video: boolean;
 }
 
 
@@ -87,17 +89,33 @@ export const addIceCandidate = (pc: RTCPeerConnection, candidates: RTCIceCandida
 //     ref.current.srcObject = stream;
 // };
 
+export const addTracksToPc = (pc: RTCPeerConnection, stream: MediaStream, prevVideoSender?: RTCRtpSender | null) => {
+
+  let videoSender: RTCRtpSender | null = prevVideoSender ?? null;
+  const videoTrack = stream.getVideoTracks();
+  const audioTrack = stream.getAudioTracks();
+
+  pc.addTrack(audioTrack[0], stream);
+
+  if (videoTrack.length > 0) {
+    videoSender = pc.addTrack(videoTrack[0], stream)
+  } else if (videoSender) {
+    pc.removeTrack(videoSender);
+  }
+  return videoSender;
+}
+
 
 const setUpPeer = (pcId: string, stream: MediaStream, taskQueue: SynchronousTaskManager<PcType[], DataType>) => {
   const pc = initiatePeerConnection();
   if (!pc || !stream)
     throw new Error(`SOME ISSUE WITH PC OR STREAM, ${pc}, ${stream}`);
 
-  stream
-    .getTracks()
-    .forEach((track) => pc.addTrack(track, stream));
+  const videoSender = addTracksToPc(pc, stream);
 
   pc.ontrack = (e) => {
+    console.log('GOT A NEW TRACK....', e.streams[0]);
+
     taskQueue.setState((prev) => {
       if (prev) {
         return prev.map(element => {
@@ -112,7 +130,7 @@ const setUpPeer = (pcId: string, stream: MediaStream, taskQueue: SynchronousTask
       return []
     })
   };
-  return pc;
+  return { pc, videoSender };
 }
 
 
@@ -122,7 +140,7 @@ export const initiateOffer = async (socketTo: string, userDetails: UserDetails, 
 
 
   const pcId = uuidv4();
-  const pc = setUpPeer(pcId, stream, taskQueue);
+  const { pc, videoSender } = setUpPeer(pcId, stream, taskQueue);
 
   const candidates: RTCIceCandidate[] = [];
   pc.onicecandidate = (e) => {
@@ -153,6 +171,7 @@ export const initiateOffer = async (socketTo: string, userDetails: UserDetails, 
     audio: true,
     video: true,
     socketId: socketTo,
+    videoSender,
     color: `#${(Math.random() * 0xFFFFFF << 0).toString(16).padStart(6, '0')}`
   } as PcType;
 
@@ -174,21 +193,36 @@ export const initiateOffer = async (socketTo: string, userDetails: UserDetails, 
   return offerData;
 };
 
+export const renegotiateOffer = async (pc: PcType, userDetails: UserDetails) => {
+  console.log('LOCAL DESCRIPTION BEFORE NEGOTIATION', pc.pc.localDescription);
+
+  await createOffer(pc.pc);
+  const offerData = {
+    ...userDetails,
+    id: pc.id,
+    socketTo: pc.socketId,
+    sdp: pc.pc.localDescription
+  }
+  console.log('LOCAL DESCRIPTION AFTER NEGOTIATION', pc.pc.localDescription);
+  return offerData;
+}
+
 
 export const initiateAnswer = async (userDetails: UserDetails, data: AnswerProps, stream: MediaStream | null, taskQueue: SynchronousTaskManager<PcType[], DataType>) => {
   if (!stream) {
     throw new Error(`STREAM IS EMPTY ${stream}`);
 
   }
-  const pc = setUpPeer(data.id, stream, taskQueue);
+  const { pc, videoSender } = setUpPeer(data.id, stream, taskQueue);
   const peerConnection = {
     id: data.id,
     pc,
     track: null,
     name: data.name,
     audio: data.audio,
-    video: true,
+    video: data.video,
     socketId: data.socketFrom,
+    videoSender,
     color: `#${(Math.random() * 0xFFFFFF << 0).toString(16).padStart(6, '0')}`
   } as PcType;
 
@@ -221,6 +255,23 @@ export const initiateAnswer = async (userDetails: UserDetails, data: AnswerProps
   return answerData;
 };
 
+export const renegotiateAnswer = async (pc: PcType, data: AnswerProps, userDetails: UserDetails,) => {
+  try {
+    await addRemoteDescription(pc.pc, data.sdp);
+    await answerOffer(pc.pc);
+  } catch (err) {
+    throw new Error("ERROR WHILE ADDING ANSWER" + err);
+  }
+  const answerData = {
+    ...userDetails,
+    id: data.id,
+    socketTo: data.socketFrom,
+    sdp: pc.pc.localDescription
+  }
+
+  return answerData;
+}
+
 export const addAnswer = async (data: AnswerProps, pcs: PcType[]) => {
   const sdp = data.sdp;
   try {
@@ -240,6 +291,7 @@ export const addAnswer = async (data: AnswerProps, pcs: PcType[]) => {
       const temp = { ...pc };
       temp.name = data.name;
       temp.audio = data.audio;
+      temp.video = data.video;
       return temp;
     }
     return pc;
@@ -251,11 +303,27 @@ interface ToggleAudioProps {
   audio: boolean;
 }
 
+interface ToggleVideoProps {
+  socket: string;
+  video: boolean;
+}
+
 export const toggleAudio = (data: ToggleAudioProps, pcs: PcType[]) => {
   return pcs.map((pc) => {
     if (pc.socketId === data.socket) {
       const temp = { ...pc };
       temp.audio = data.audio;
+      return temp;
+    }
+    return pc;
+  })
+}
+
+export const toggleVideo = (data: ToggleVideoProps, pcs: PcType[]) => {
+  return pcs.map((pc) => {
+    if (pc.socketId === data.socket) {
+      const temp = { ...pc };
+      temp.video = data.video;
       return temp;
     }
     return pc;

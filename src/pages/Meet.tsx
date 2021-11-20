@@ -9,17 +9,25 @@ import {
 import { useHistory } from "react-router";
 import VideoContainer from "../components/VideoContainer";
 import { useRecoilState } from "recoil";
-import { state as userState, user as userDetails } from "../recoil/state";
+import {
+  ConstraintsProps,
+  state as userState,
+  user as userDetails,
+} from "../recoil/state";
 import addSockets, { DataType } from "../utils/socket";
 import {
   addAnswer,
   addIceCandidate,
+  addTracksToPc,
   disconnect,
   getUserStream,
   initiateAnswer,
   initiateOffer,
   PcType,
+  renegotiateAnswer,
+  renegotiateOffer,
   toggleAudio,
+  toggleVideo,
   UserDetails,
 } from "../utils/Video";
 import { io, Socket } from "socket.io-client";
@@ -72,29 +80,43 @@ export default function Meet(props: any) {
     });
   }, [videoRefs]);
 
-  // useEffect(() => {
-  //   async function getUserMediaStream() {
-  //     if (state.stream) {
-  //       state.stream.getTracks().forEach(function (track) {
-  //         track.stop();
-  //       });
-  //     }
-  //     const stream = await getUserStream(state.constraints);
-  //     if (stream) {
-  //       setState((oldState) => ({
-  //         ...oldState,
-  //         stream,
-  //       }));
-  //       if (selfVideoRef.current) {
-  //         selfVideoRef.current.srcObject = stream;
-  //       }
-  //     }
-  //   }
-  //   getUserMediaStream();
-  //   // eslint-disable-next-line react-hooks/exhaustive-deps
-  // }, [state.constraints]);
+  useEffect(() => {
+    if (selfVideoRef.current) {
+      selfVideoRef.current.srcObject = state.stream;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.stream]);
 
-  const videoButtonClickHandler = (type: string) => {
+  const changeStream = async (constraints: ConstraintsProps) => {
+    const stream = await getUserStream(constraints);
+    if (!stream) return;
+    const userDetail = {
+      name: user.name,
+      ...state.constraints,
+      socketFrom: socket?.id,
+    } as UserDetails;
+    if (taskQueue.current && taskQueue.current.state) {
+      const newPc = taskQueue.current.state.map(async (element) => {
+        const videoSender = addTracksToPc(
+          element.pc,
+          stream,
+          element.videoSender
+        );
+        const offerData = await renegotiateOffer(element, userDetail);
+        socket?.emit("send_offer", offerData);
+        const temp = { ...element };
+        temp.videoSender = videoSender;
+        return temp;
+      });
+      console.log("NEW PC", await Promise.all(newPc));
+    }
+    setState((oldState) => ({
+      ...oldState,
+      stream,
+    }));
+  };
+
+  const videoButtonClickHandler = async (type: string) => {
     const constraints = { ...state.constraints };
     switch (type) {
       case "audio":
@@ -105,6 +127,11 @@ export default function Meet(props: any) {
         break;
       case "video":
         constraints.video = !constraints.video;
+        socket?.emit("toggle_video", {
+          video: constraints.video,
+        });
+        await changeStream(constraints);
+
         break;
       case "disconnect":
         socket?.close();
@@ -177,12 +204,25 @@ export default function Meet(props: any) {
 
       case SOCKET_CONSTANTS.INITIATE_ANSWER:
         console.log("GOT AN OFFER", value.value);
-        const answerData = await initiateAnswer(
-          userDetail,
-          value.value,
-          state.stream,
-          taskQueue.current
-        );
+        let tempPc = null;
+        let answerData = null;
+        if (taskQueue.current && taskQueue.current.state) {
+          tempPc = taskQueue.current.state.find(
+            (element) => element.id === value.value.id
+          );
+        }
+        if (tempPc) {
+          console.log("RENEGOTIATING ANSWER");
+
+          answerData = await renegotiateAnswer(tempPc, value.value, userDetail);
+        } else {
+          answerData = await initiateAnswer(
+            userDetail,
+            value.value,
+            state.stream,
+            taskQueue.current
+          );
+        }
         console.log("SENDING ANSWER", answerData);
         socket?.emit("send_answer", answerData);
         break;
@@ -214,6 +254,12 @@ export default function Meet(props: any) {
       case SOCKET_CONSTANTS.AUDIO_TOGGLE:
         if (taskQueue.current.state) {
           const newPc = toggleAudio(value.value, taskQueue.current.state);
+          taskQueue.current.setState((_) => newPc);
+        }
+        break;
+      case SOCKET_CONSTANTS.VIDEO_TOGGLE:
+        if (taskQueue.current.state) {
+          const newPc = toggleVideo(value.value, taskQueue.current.state);
           taskQueue.current.setState((_) => newPc);
         }
         break;

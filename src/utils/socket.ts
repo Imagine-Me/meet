@@ -67,7 +67,7 @@ export default function addSockets(link: string, socket: Socket, taskQueue: Sync
         taskQueue.add(result);
     });
 
-    socket.on(SOCKET_CONSTANTS.AUDIO_TOGGLE, function (this: any, data) {
+    socket.on("audio_toggle", function (data) {
         const result = {
             type: SOCKET_CONSTANTS.AUDIO_TOGGLE,
             value: data,
@@ -76,6 +76,14 @@ export default function addSockets(link: string, socket: Socket, taskQueue: Sync
         taskQueue.add(result)
     });
 
+    socket.on('video_toggle', function (data) {
+        const result = {
+            type: SOCKET_CONSTANTS.VIDEO_TOGGLE,
+            value: data,
+            id: null
+        } as DataType;
+        taskQueue.add(result)
+    });
     socket.on("disconnected", function (data) {
         const result = {
             value: data,
