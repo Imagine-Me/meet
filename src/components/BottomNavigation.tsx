@@ -11,6 +11,7 @@ import { AudioButton, VideoButton } from "./IconButtons";
 interface Props {
   clickHandler: (val: string) => void;
   show: boolean;
+  count: number;
   copyToClipboard: () => void;
 }
 
@@ -34,7 +35,12 @@ const useStyles = makeStyles({
   },
 });
 
-const BottomNavigation = ({ clickHandler, show, copyToClipboard }: Props) => {
+const BottomNavigation = ({
+  clickHandler,
+  show,
+  copyToClipboard,
+  count,
+}: Props) => {
   const state = useRecoilValue(siteState);
   const classes = useStyles();
   return (
@@ -67,7 +73,7 @@ const BottomNavigation = ({ clickHandler, show, copyToClipboard }: Props) => {
           </IconButtonCustom>
         </div>
         <div>
-          <Badge badgeContent={4} color="primary">
+          <Badge badgeContent={count} color="primary">
             <Button
               sx={{
                 minWidth: "50px",

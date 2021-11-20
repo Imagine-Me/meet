@@ -374,6 +374,7 @@ export default function Meet(props: any) {
       <BottomNavigation
         clickHandler={videoButtonClickHandler}
         show={show}
+        count={videoRefs.length}
         copyToClipboard={copyToClipBoard}
       />
       <LinkDialog
