@@ -1,6 +1,6 @@
-import { makeStyles } from '@material-ui/core'
+import { makeStyles } from '@mui/styles'
 
-export const meetStyles = makeStyles({
+export const meetStyles: any = makeStyles({
     container: {
         width: '100%',
         height: '100%'
@@ -16,9 +16,10 @@ export const meetStyles = makeStyles({
         width: "100%",
     },
     video: {
-        objectFit: "fill",
+        objectFit: "cover",
         width: "100%",
         height: "100%",
+        transform: "rotateY(180deg)",
     },
     selfVideoSmall: {
         position: 'absolute',

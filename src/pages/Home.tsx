@@ -5,11 +5,15 @@ import {
   Grid,
   TextField,
   Typography,
-} from "@material-ui/core";
+} from "@mui/material";
 import { useEffect, useRef, useState } from "react";
-import { useRecoilState } from "recoil";
+import { useRecoilState, useSetRecoilState } from "recoil";
 import { getUserStream } from "../utils/Video";
-import { state as siteState, user as userState } from "../recoil/state";
+import {
+  state as siteState,
+  user as userState,
+  snackbar,
+} from "../recoil/state";
 import { AudioButton, VideoButton } from "../components/IconButtons";
 import { fetchApi } from "../utils/fetch";
 import useQuery from "../hooks/useQuery";
@@ -22,9 +26,11 @@ interface Props {
 
 export default function Home({ location }: Props) {
   const [host, setHost] = useState<boolean>(false);
+  const [joinee, setJoinee] = useState<boolean>(false);
   const [link, setLink] = useState<string>("");
   const [state, setState] = useRecoilState(siteState);
   const [user, setUser] = useRecoilState(userState);
+  const setSnackState = useSetRecoilState(snackbar);
   const style = homeStyle();
   const parameter = useQuery(location);
 
@@ -105,6 +111,7 @@ export default function Home({ location }: Props) {
         initiatePeer("host", dataHost);
         break;
       case "join":
+        setJoinee(true);
         const dataJoin = {
           name: user.name,
           meetId: link,
@@ -128,6 +135,11 @@ export default function Home({ location }: Props) {
       setHost(false);
       history.push(`/${json.meetId}`);
     } catch (err) {
+      setSnackState({
+        message: "Server is not reachable",
+        type: "error",
+        show: true,
+      });
       console.error("THERE IS AN ERROR WHILE CONNECTING SERVER", err);
     }
   };
@@ -146,7 +158,7 @@ export default function Home({ location }: Props) {
                   variant="outlined"
                   placeholder="Enter Name"
                   label=""
-                  className={style.textField}
+                  sx={{ mt: 2 }}
                   onChange={(e) =>
                     setUser((prev) => ({ ...prev, name: e.target.value }))
                   }
@@ -158,6 +170,7 @@ export default function Home({ location }: Props) {
                   variant="contained"
                   size="large"
                   fullWidth
+                  sx={{ mt: 2 }}
                   className={style.marginTop}
                   onClick={() => meetButtonHandler("host")}
                   disabled={!user.name || link.length > 0}
@@ -175,6 +188,7 @@ export default function Home({ location }: Props) {
                   variant="outlined"
                   placeholder="Enter link"
                   label=""
+                  sx={{ mt: 2 }}
                   className={style.marginTop}
                   onChange={(e) => setLink(e.target.value)}
                   value={link}
@@ -185,10 +199,18 @@ export default function Home({ location }: Props) {
                   variant="contained"
                   size="large"
                   fullWidth
+                  sx={{ mt: 2 }}
                   className={style.marginTop}
                   disabled={!link || !user.name}
                   onClick={() => meetButtonHandler("join")}
                 >
+                  {joinee && (
+                    <CircularProgress
+                      color="inherit"
+                      size={18}
+                      style={{ marginRight: "8px" }}
+                    />
+                  )}
                   Join Meeting
                 </Button>
               </Box>

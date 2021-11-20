@@ -1,4 +1,4 @@
-import { makeStyles } from "@material-ui/core";
+import { makeStyles} from "@mui/styles";
 import UserAvatar from "../components/UserAvatar";
 import { AiOutlineAudioMuted, AiOutlineAudio } from "react-icons/ai";
 
@@ -10,7 +10,7 @@ interface Props {
   children?: React.ReactNode;
 }
 
-const useStyle1 = makeStyles((theme) => ({
+const useStyle1: any = makeStyles({
   containerWithoutVideo: {
     backgroundColor: "#363636",
     border: "2px solid grey",
@@ -46,7 +46,7 @@ const useStyle1 = makeStyles((theme) => ({
     visibility: "hidden",
     position: "absolute",
   },
-}));
+});
 
 function UserDetails({ name, audio }: Partial<Props>) {
   const styles = useStyle1();
