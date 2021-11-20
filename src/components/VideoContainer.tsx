@@ -42,17 +42,11 @@ const useStyle1 = makeStyles((theme) => ({
     alignItems: "center",
     borderRadius: "50%",
   },
-}));
-
-const useStyle2 = makeStyles({
-  container: {
+  isHidden: {
+    visibility: "hidden",
     position: "absolute",
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
   },
-});
+}));
 
 function UserDetails({ name, audio }: Partial<Props>) {
   const styles = useStyle1();
@@ -74,26 +68,6 @@ function UserDetails({ name, audio }: Partial<Props>) {
   );
 }
 
-function ContainerWithoutVideo({ audio, name, color }: Partial<Props>) {
-  const styles = useStyle1();
-  return (
-    <div className={styles.containerWithoutVideo}>
-      <UserAvatar size={100} name={name ?? ""} color={color ?? ""} />
-      <UserDetails audio={audio} name={name} />
-    </div>
-  );
-}
-
-function ContainerWithVideo({ audio, name, children }: Partial<Props>) {
-  const styles = useStyle1();
-  return (
-    <div className={styles.containerWithoutVideo}>
-      {children}
-      <UserDetails audio={audio} name={name} />
-    </div>
-  );
-}
-
 export default function VideoContainer({
   audio,
   video,
@@ -101,11 +75,19 @@ export default function VideoContainer({
   children,
   color,
 }: Props) {
-  return video ? (
-    <ContainerWithVideo audio={audio} name={name}>
-      {children}
-    </ContainerWithVideo>
-  ) : (
-    <ContainerWithoutVideo audio={audio} name={name} color={color} />
+  const styles = useStyle1();
+  return (
+    <div className={styles.containerWithoutVideo}>
+      {!video && (
+        <UserAvatar size={100} name={name ?? ""} color={color ?? ""} />
+      )}
+      <div
+        style={{ width: "100%", height: "100%" }}
+        className={video ? undefined : styles.isHidden}
+      >
+        {children}
+      </div>
+      <UserDetails audio={audio} name={name} />
+    </div>
   );
 }

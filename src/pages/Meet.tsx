@@ -95,7 +95,7 @@ export default function Meet(props: any) {
       socketFrom: socket?.id,
     } as UserDetails;
     if (taskQueue.current && taskQueue.current.state) {
-      const newPc = taskQueue.current.state.map(async (element) => {
+      taskQueue.current.state.forEach(async (element) => {
         const videoSender = addTracksToPc(
           element.pc,
           stream,
@@ -270,6 +270,7 @@ export default function Meet(props: any) {
   return (
     <div className={styles.mainContainer}>
       <div
+      onClick={toggleBottomNavigation}
         className={
           videoRefs.length > 0 ? styles.selfVideoSmall : styles.videoContainer
         }
