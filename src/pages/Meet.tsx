@@ -261,7 +261,11 @@ export default function Meet(props: any) {
   };
   const toggleBottomNavigation = () => setShow((prev) => !prev);
 
-  const processTaskCallback = useCallback(processTask, [socket, user, state]);
+  const processTaskCallback = useCallback(
+    processTask,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [socket, user, state]
+  );
 
   useEffect(() => {
     taskQueue.current.listen(processTaskCallback);
@@ -270,7 +274,7 @@ export default function Meet(props: any) {
   return (
     <div className={styles.mainContainer}>
       <div
-      onClick={toggleBottomNavigation}
+        onClick={toggleBottomNavigation}
         className={
           videoRefs.length > 0 ? styles.selfVideoSmall : styles.videoContainer
         }
