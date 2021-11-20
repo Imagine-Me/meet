@@ -265,11 +265,15 @@ export const renegotiateAnswer = async (pc: PcType, data: AnswerProps, userDetai
 
 export const addAnswer = async (data: AnswerProps, pcs: PcType[]) => {
   const sdp = data.sdp;
+  let isAlreadyJoined = false;
   try {
     const pc: PcType | undefined = pcs.find(
       (element) => element.id === data.id
     );
     if (pc) {
+      if (pc.pc.remoteDescription) {
+        isAlreadyJoined = true;
+      }
       await addRemoteDescription(pc.pc, sdp);
     }
   } catch {
@@ -277,7 +281,7 @@ export const addAnswer = async (data: AnswerProps, pcs: PcType[]) => {
   }
 
 
-  return pcs.map((pc) => {
+  const newPcs = pcs.map((pc) => {
     if (pc.id === data.id) {
       const temp = { ...pc };
       temp.name = data.name;
@@ -287,6 +291,8 @@ export const addAnswer = async (data: AnswerProps, pcs: PcType[]) => {
     }
     return pc;
   })
+
+  return { newPcs, isAlreadyJoined };
 };
 
 interface ToggleAudioProps {
@@ -323,8 +329,11 @@ export const toggleVideo = (data: ToggleVideoProps, pcs: PcType[]) => {
 
 export const disconnect = (socket: string, pcs: PcType[]) => {
   const pc = pcs.find(element => element.socketId === socket);
+  let userName = '';
   if (pc) {
     pc.pc.close();
+    userName = pc.name;
   }
-  return pcs.filter(element => element.socketId !== socket)
+  const newPc = pcs.filter(element => element.socketId !== socket)
+  return { newPc, userName }
 }

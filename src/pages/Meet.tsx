@@ -8,9 +8,11 @@ import {
 } from "react";
 import { useHistory } from "react-router";
 import VideoContainer from "../components/VideoContainer";
-import { useRecoilState } from "recoil";
+import { useRecoilState, useSetRecoilState } from "recoil";
+import { LinkDialog } from "../components/LinkDialog";
 import {
   ConstraintsProps,
+  snackbar,
   state as userState,
   user as userDetails,
 } from "../recoil/state";
@@ -33,18 +35,19 @@ import {
 import { io, Socket } from "socket.io-client";
 import * as SOCKET_CONSTANTS from "../constants/socketConstant";
 import { meetStyles } from "../theme/meet";
-import { Grid, GridSize, useMediaQuery } from "@material-ui/core";
+import { Grid, GridSize, useMediaQuery } from "@mui/material";
 import BottomNavigation from "../components/BottomNavigation";
 import { desktopGridSize, mobileGridSize } from "../utils/gridSize";
 import { SynchronousTaskManager } from "synchronous-task-manager";
 
 export default function Meet(props: any) {
   const [socket, setSocket] = useState<Socket | null>(null);
-  // const [tracks, setTracks] = useState([]);
+  const [showDialog, setShowDialog] = useState<boolean>(false);
   const [pc, setPc] = useState<PcType[]>([]);
   const [show, setShow] = useState<boolean>(true);
   const [state, setState] = useRecoilState(userState);
   const [user, setUser] = useRecoilState(userDetails);
+  const setSnackState = useSetRecoilState(snackbar);
 
   const taskQueue = useRef(new SynchronousTaskManager<PcType[], DataType>([]));
 
@@ -162,6 +165,7 @@ export default function Meet(props: any) {
           if (selfVideoRef.current) {
             selfVideoRef.current.srcObject = state.stream;
           }
+          setShowDialog(true);
         }
       } else {
         history.push(`/?redirect=${link}`);
@@ -218,8 +222,18 @@ export default function Meet(props: any) {
 
       case SOCKET_CONSTANTS.ADD_ANSWER:
         if (taskQueue.current.state) {
-          const newPc = await addAnswer(value.value, taskQueue.current.state);
-          taskQueue.current.setState((_) => newPc);
+          const { newPcs, isAlreadyJoined } = await addAnswer(
+            value.value,
+            taskQueue.current.state
+          );
+          if (!isAlreadyJoined) {
+            setSnackState({
+              message: `${value.value.name} joined`,
+              type: "success",
+              show: true,
+            });
+          }
+          taskQueue.current.setState((_) => newPcs);
         }
         break;
 
@@ -250,7 +264,15 @@ export default function Meet(props: any) {
         break;
       case SOCKET_CONSTANTS.DISCONNECTED:
         if (taskQueue.current.state) {
-          const newPc = disconnect(value.value, taskQueue.current.state);
+          const { newPc, userName } = disconnect(
+            value.value,
+            taskQueue.current.state
+          );
+          setSnackState({
+            message: `${userName} is leaving`,
+            type: "error",
+            show: true,
+          });
           taskQueue.current.setState((_) => newPc);
         }
         break;
@@ -338,6 +360,13 @@ export default function Meet(props: any) {
         </Grid>
       </div>
       <BottomNavigation clickHandler={videoButtonClickHandler} show={show} />
+      <LinkDialog
+        open={showDialog}
+        handleClose={() => {
+          setShowDialog(false);
+        }}
+        link={window.location.href}
+      />
     </div>
   );
 }

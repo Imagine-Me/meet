@@ -1,11 +1,12 @@
-import { Box, Button, makeStyles, Typography } from "@material-ui/core";
+import { Box, Button, Theme, Typography } from "@mui/material";
+import { makeStyles } from "@mui/styles";
 import { useRecoilValue } from "recoil";
 import { user as userState } from "../recoil/state";
 
 import User from "../icons/user";
 import VideoIcon from "../icons/videoIcon";
 
-const useStyles = makeStyles((theme) => ({
+const useStyles = makeStyles((theme: Theme) => ({
   bodyMargin: {
     margin: "0 15px",
     [theme.breakpoints.up("lg")]: {

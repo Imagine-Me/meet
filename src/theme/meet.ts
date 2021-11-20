@@ -1,6 +1,6 @@
-import { makeStyles } from '@material-ui/core'
+import { makeStyles } from '@mui/styles'
 
-export const meetStyles = makeStyles({
+export const meetStyles: any = makeStyles({
     container: {
         width: '100%',
         height: '100%'

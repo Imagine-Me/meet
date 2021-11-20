@@ -16,6 +16,14 @@ interface UserProps {
   name: string,
 }
 
+interface SnackbarProps {
+  message: string,
+  show: boolean;
+  type: SnackType;
+}
+
+type SnackType = "error" | "warning" | "info" | "success";
+
 export const state = atom({
   key: "state",
   default: {
@@ -34,4 +42,14 @@ export const user = atom({
     isAuthenticated: false,
     name: '',
   } as UserProps,
+});
+
+
+export const snackbar = atom({
+  key: "snackbar",
+  default: {
+    show: false,
+    message: '',
+    type: 'success'
+  } as SnackbarProps,
 });

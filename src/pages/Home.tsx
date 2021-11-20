@@ -5,7 +5,7 @@ import {
   Grid,
   TextField,
   Typography,
-} from "@material-ui/core";
+} from "@mui/material"
 import { useEffect, useRef, useState } from "react";
 import { useRecoilState } from "recoil";
 import { getUserStream } from "../utils/Video";
@@ -146,7 +146,7 @@ export default function Home({ location }: Props) {
                   variant="outlined"
                   placeholder="Enter Name"
                   label=""
-                  className={style.textField}
+                  sx={{ mt: 2}}
                   onChange={(e) =>
                     setUser((prev) => ({ ...prev, name: e.target.value }))
                   }
@@ -158,6 +158,7 @@ export default function Home({ location }: Props) {
                   variant="contained"
                   size="large"
                   fullWidth
+                  sx={{ mt: 2}}
                   className={style.marginTop}
                   onClick={() => meetButtonHandler("host")}
                   disabled={!user.name || link.length > 0}
@@ -175,6 +176,7 @@ export default function Home({ location }: Props) {
                   variant="outlined"
                   placeholder="Enter link"
                   label=""
+                  sx={{ mt: 2}}
                   className={style.marginTop}
                   onChange={(e) => setLink(e.target.value)}
                   value={link}
@@ -185,6 +187,7 @@ export default function Home({ location }: Props) {
                   variant="contained"
                   size="large"
                   fullWidth
+                  sx={{ mt: 2}}
                   className={style.marginTop}
                   disabled={!link || !user.name}
                   onClick={() => meetButtonHandler("join")}

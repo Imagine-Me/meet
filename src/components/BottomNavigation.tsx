@@ -1,10 +1,16 @@
-import { Box, makeStyles } from "@material-ui/core";
+import { Box } from "@mui/material";
+import { makeStyles } from "@mui/styles";
 import { useRecoilValue } from "recoil";
 import { state as siteState } from "../recoil/state";
 import { MdOutlineCallEnd } from "react-icons/md";
 
 import { IconButton } from "./Button";
 import { AudioButton, VideoButton } from "./IconButtons";
+
+interface Props {
+  clickHandler: (val: string) => void;
+  show: boolean;
+}
 
 const useStyles = makeStyles({
   navigation: {
@@ -20,11 +26,6 @@ const useStyles = makeStyles({
     alignItems: "center",
   },
 });
-
-interface Props {
-  clickHandler: (val: string) => void;
-  show: boolean;
-}
 
 const BottomNavigation = ({ clickHandler, show }: Props) => {
   const state = useRecoilValue(siteState);
