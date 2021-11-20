@@ -20,6 +20,7 @@ export const homeStyle = makeStyles((theme: Theme) => ({
     width: "100%",
     height: "100%",
     borderRadius: "7px",
+    transform: "rotateY(180deg)",
   },
   videoFooter: {
     position: "absolute",

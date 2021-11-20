@@ -16,9 +16,10 @@ export const meetStyles: any = makeStyles({
         width: "100%",
     },
     video: {
-        objectFit: "fill",
+        objectFit: "cover",
         width: "100%",
         height: "100%",
+        transform: "rotateY(180deg)",
     },
     selfVideoSmall: {
         position: 'absolute',
